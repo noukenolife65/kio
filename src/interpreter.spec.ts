@@ -10,6 +10,7 @@ describe("DummyInterpreter", () => {
       .succeed(1)
       .map((a) => a + 1)
       .flatMap((a) => KIO.succeed(a + 1))
+      // .flatMap((_) => KIO.fail('error'))
       .commit(interpreter);
     expect(result).toStrictEqual(new Right(3));
   });

@@ -2,11 +2,11 @@ import {KIOA} from "./kio.ts";
 import {Either, Left, Right} from "./either.ts";
 
 export interface Interpreter {
-  interpret<E, A1, A2>(kioa: KIOA<E, A1, A2>): Promise<Either<E, A2>>;
+  interpret<E, A>(kioa: KIOA<E, A>): Promise<Either<E, A>>;
 }
 
 export class DummyInterpreter implements Interpreter {
-  async interpret<E, A1, A2>(kioa: KIOA<E, A1, A2>): Promise<Either<E, A2>> {
+  async interpret<E, A>(kioa: KIOA<E, A>): Promise<Either<E, A>> {
     switch (kioa.kind) {
       case 'Succeed': return Promise.resolve(new Right(kioa.value));
       case 'Fail': return Promise.resolve(new Left(kioa.error));
