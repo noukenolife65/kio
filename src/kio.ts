@@ -33,6 +33,14 @@ export class KIO<S extends {}, E, A> {
     return (f) => this.flatMap(name)((a, s) => new KIO({ kind: 'Succeed', name, value: f(a, s) }));
   }
 
+  getRecord<N extends string>(name: N): <R extends {}>(args: { app: number | string, id: number | string }) => KIO<S & KIOS<N, R>, E, R> {
+    return (args) => new KIO({
+      kind: 'GetRecord',
+      name,
+      ...args
+    });
+  }
+
   async commit(interpreter: Interpreter): Promise<Either<E, A>> {
     return interpreter.interpret(this.kioa);
   }
@@ -41,4 +49,5 @@ export class KIO<S extends {}, E, A> {
 export type KIOA<E, A> =
   | { kind: 'FlatMap', name: string, self: KIOA<any, any>, f: (a: any, s: any) => KIOA<E, A> }
   | { kind: 'Succeed', name: string, value: A }
-  | { kind: 'Fail'; error: E };
+  | { kind: 'Fail', error: E }
+  | { kind: 'GetRecord', name: string, app: number | string, id: number | string };
