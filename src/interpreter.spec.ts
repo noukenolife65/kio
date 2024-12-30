@@ -1,10 +1,17 @@
 import {describe, expect, it} from "vitest";
 import {KIO} from "./kio.ts";
-import {DummyInterpreter} from "./interpreter.ts";
+import {InterpreterImpl} from "./interpreter.ts";
 import {Right} from "./either.ts";
+import {KintoneRestAPIClient} from "@kintone/rest-api-client";
 
 describe("DummyInterpreter", () => {
-  const interpreter = new DummyInterpreter();
+  const client = new KintoneRestAPIClient({
+    baseUrl: process.env.KINTONE_BASE_URL,
+    auth: {
+      apiToken: process.env.KINTONE_API_TOKEN
+    }
+  });
+  const interpreter = new InterpreterImpl(client);
   it("test", async () => {
     const result = await KIO
       .succeed('firstNum')(1)
@@ -14,9 +21,9 @@ describe("DummyInterpreter", () => {
         console.log(s);
         return s.firstNum + 2;
       })
-      .flatMap('')(() => KIO.fail('error'))
+      .getRecord('record')<{ $id: { value: string } }>({ app: 1, id: 1 })
+      .map('mapRecord')((_, s) => s.record.$id.value)
       .commit(interpreter);
-    console.log(result);
     expect(result).toStrictEqual(new Right(3));
   });
 });
