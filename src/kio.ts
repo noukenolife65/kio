@@ -2,7 +2,7 @@ import {Interpreter} from "./interpreter.ts";
 import {Either} from "./either.ts";
 
 export type KIOS<T extends string, A> = {
-  [K in T]: A
+  readonly [K in T]: A
 };
 
 export class KIO<S extends {}, E, A> {
