@@ -12,7 +12,7 @@ export class KIO<S extends {}, E, A> {
     this.kioa = kioa;
   }
 
-  static succeed<N extends string>(name: N): <A>(a: A) => KIO<KIOS<N, A>, unknown, A> {
+  static succeed<N extends string>(name: N): <E, A>(a: A) => KIO<KIOS<N, A>, E, A> {
     return (a) => new KIO({ name, kind: 'Succeed', value: a });
   }
 
@@ -30,15 +30,17 @@ export class KIO<S extends {}, E, A> {
   }
 
   map<N extends string>(name: N): <E1, B>(f: (a: A, s: S) => B) => KIO<S & KIOS<N, B>, E1, B> {
-    return (f) => this.flatMap(name)((a, s) => new KIO({ kind: 'Succeed', name, value: f(a, s) }));
+    return (f) => this.flatMap(name)((a, s) => {
+      return new KIO({ kind: 'Succeed', name, value: f(a, s) })
+    });
   }
 
   getRecord<N extends string>(name: N): <R extends {}>(args: { app: number | string, id: number | string }) => KIO<S & KIOS<N, R>, E, R> {
-    return (args) => new KIO({
+    return (args) => this.flatMap(name)(() => new KIO({
       kind: 'GetRecord',
       name,
       ...args
-    });
+    }));
   }
 
   async commit(interpreter: Interpreter): Promise<Either<E, A>> {
