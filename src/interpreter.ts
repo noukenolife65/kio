@@ -1,19 +1,19 @@
 import {KIOA} from "./kio.ts";
 import {Either, Left, Right} from "./either.ts";
-import {KintoneRestAPIClient} from "@kintone/rest-api-client";
+import {KintoneClient} from "./client.ts";
 
 export interface Interpreter {
   interpret<E, A>(kioa: KIOA<E, A>): Promise<Either<E, A>>;
 }
 
 export class InterpreterImpl implements Interpreter {
-  private client: KintoneRestAPIClient;
+  private client: KintoneClient;
 
-  constructor(client: KintoneRestAPIClient) {
+  constructor(client: KintoneClient) {
     this.client = client;
   }
 
-  async _interpret<S extends {}, E, A>(state: S, kioa: KIOA<E, A>): Promise<Either<E, [S, A]>> {
+  private async _interpret<S extends {}, E, A>(state: S, kioa: KIOA<E, A>): Promise<Either<E, [S, A]>> {
     switch (kioa.kind) {
       case 'Succeed':
         const newState = { ...state, [kioa.name]: kioa.value }
@@ -26,8 +26,7 @@ export class InterpreterImpl implements Interpreter {
             case 'Left':
               return r1;
             case 'Right':
-              const [s, a1] = r1.value
-              const s1 = {...s, [kioa.name]: a1}
+              const [s1, a1] = r1.value
               const r2 = await this._interpret(s1, kioa.f(a1, s1));
               return (() => {
                 switch (r2.kind) {
@@ -42,7 +41,7 @@ export class InterpreterImpl implements Interpreter {
           }
         })();
       case 'GetRecord':
-        const { record } = await this.client.record.getRecord({ app: kioa.app, id: kioa.id });
+        const { record } = await this.client.getRecord({ app: kioa.app, id: kioa.id });
         return new Right([ { ...state, [kioa.name]: record }, record ] as [S, A]);
     }
   }
