@@ -12,15 +12,15 @@ export class KIO<S extends object, E, A> {
     this.kioa = kioa;
   }
 
-  static succeed<N extends string>(name: N): <E, A>(a: A) => KIO<KIOS<N, A>, E, A> {
+  static succeed<N extends string>(name: N): <A>(a: A) => KIO<KIOS<N, A>, never, A> {
     return (a) => new KIO({ name, kind: 'Succeed', value: a });
   }
 
-  static fail<E>(e: E): KIO<object, E, unknown> {
+  static fail<E>(e: E): KIO<object, E, never> {
     return new KIO({ kind: 'Fail', error: e });
   }
 
-  flatMap<N extends string>(name: N): <S1 extends object, E1, B>(f: (a: A, s: S) => KIO<S1, E1, B>) => KIO<S & KIOS<N, B>, E1, B> {
+  flatMap<N extends string>(name: N): <S1 extends object, E1, B>(f: (a: A, s: S) => KIO<S1, E1, B>) => KIO<S & KIOS<N, B>, E | E1, B> {
     return (f) => new KIO({
       kind: 'FlatMap',
       name,
@@ -29,13 +29,13 @@ export class KIO<S extends object, E, A> {
     });
   }
 
-  map<N extends string>(name: N): <E1, B>(f: (a: A, s: S) => B) => KIO<S & KIOS<N, B>, E1, B> {
+  map<N extends string>(name: N): <B>(f: (a: A, s: S) => B) => KIO<S & KIOS<N, B>, E, B> {
     return (f) => this.flatMap(name)((a, s) => {
       return new KIO({ kind: 'Succeed', name, value: f(a, s) })
     });
   }
 
-  static getRecord<N extends string>(name: N): <R extends object>(args: { app: number | string, id: number | string }) => KIO<object, unknown, R> {
+  static getRecord<N extends string>(name: N): <R extends object>(args: { app: number | string, id: number | string }) => KIO<object, never, R> {
     return (args) => new KIO({
       kind: 'GetRecord',
       name,
