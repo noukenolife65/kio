@@ -59,7 +59,7 @@ describe("InterpreterImpl", () => {
       const expectedRecord = { app: 1, id: 1 };
       const result = await KIO
         .succeed('succeed')(1)
-        .getRecord('record')({ app: 1, id: 1 })
+        .flatMap('record')(() => KIO.getRecord('record')<typeof expectedRecord>({ app: 1, id: 1 }))
         .map('map')((a, s) => {
           expect(s).toStrictEqual({ 'succeed': 1, 'record': expectedRecord });
           return a;
