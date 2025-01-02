@@ -1,5 +1,3 @@
-import {KIO} from "./kio.ts";
+import { KIO } from "./kio.ts";
 
-export {
-  KIO
-}
+export { KIO };
