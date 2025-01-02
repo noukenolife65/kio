@@ -7,7 +7,7 @@ import {KintoneClient} from "./client.ts";
 describe("InterpreterImpl", () => {
 
   class FakeKintoneClient implements KintoneClient {
-      async getRecord<T extends { [k: string]: any; }>(params: { app: string | number; id: string | number; }): Promise<{ record: T; }> {
+      async getRecord<T extends { [k: string]: unknown; }>(params: { app: string | number; id: string | number; }): Promise<{ record: T; }> {
         return {
           record: params as unknown as T
         }

@@ -26,7 +26,7 @@ export class InterpreterImpl implements Interpreter {
         const r1 = await this._interpret(state, kioa.self);
         return (async () => {
           switch (r1.kind) {
-            case 'Left': return r1;
+            case 'Left': return r1 as Left<E>;
             case 'Right': {
               const [s1, a1] = r1.value
               const r2 = await this._interpret(s1, kioa.f(a1, s1));

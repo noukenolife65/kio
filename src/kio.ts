@@ -25,7 +25,7 @@ export class KIO<S extends object, E, A> {
       kind: 'FlatMap',
       name,
       self: this.kioa,
-      f: (a, s) => f(a, s).kioa,
+      f: (a, s) => f(a as A, s as S).kioa,
     });
   }
 
@@ -49,7 +49,7 @@ export class KIO<S extends object, E, A> {
 }
 
 export type KIOA<E, A> =
-  | { kind: 'FlatMap', name: string, self: KIOA<any, any>, f: (a: any, s: any) => KIOA<E, A> }
+  | { kind: 'FlatMap', name: string, self: KIOA<unknown, unknown>, f: (a: unknown, s: unknown) => KIOA<E, A> }
   | { kind: 'Succeed', name: string, value: A }
   | { kind: 'Fail', error: E }
   | { kind: 'GetRecord', name: string, app: number | string, id: number | string };
