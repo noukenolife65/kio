@@ -35,12 +35,12 @@ export class KIO<S extends object, E, A> {
     });
   }
 
-  getRecord<N extends string>(name: N): <R extends object>(args: { app: number | string, id: number | string }) => KIO<S & KIOS<N, R>, E, R> {
-    return (args) => this.flatMap(name)(() => new KIO({
+  static getRecord<N extends string>(name: N): <R extends object>(args: { app: number | string, id: number | string }) => KIO<object, unknown, R> {
+    return (args) => new KIO({
       kind: 'GetRecord',
       name,
       ...args
-    }));
+    });
   }
 
   async commit(interpreter: Interpreter): Promise<Either<E, A>> {
