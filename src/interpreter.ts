@@ -1,6 +1,6 @@
-import {KIOA} from "./kio.ts";
-import {Either, Left, Right} from "./either.ts";
-import {KintoneClient} from "./client.ts";
+import { KIOA } from "./kio.ts";
+import { Either, Left, Right } from "./either.ts";
+import { KintoneClient } from "./client.ts";
 
 export interface Interpreter {
   interpret<E, A>(kioa: KIOA<E, A>): Promise<Either<E, A>>;
@@ -13,29 +13,34 @@ export class InterpreterImpl implements Interpreter {
     this.client = client;
   }
 
-  private async _interpret<S extends object, E, A>(state: S, kioa: KIOA<E, A>): Promise<Either<E, [S, A]>> {
+  private async _interpret<S extends object, E, A>(
+    state: S,
+    kioa: KIOA<E, A>,
+  ): Promise<Either<E, [S, A]>> {
     switch (kioa.kind) {
-      case 'Succeed': {
-        const newState = {...state, [kioa.name]: kioa.value}
+      case "Succeed": {
+        const newState = { ...state, [kioa.name]: kioa.value };
         return Promise.resolve(new Right([newState, kioa.value] as [S, A]));
       }
-      case 'Fail': {
+      case "Fail": {
         return Promise.resolve(new Left(kioa.error));
       }
-      case 'FlatMap': {
+      case "FlatMap": {
         const r1 = await this._interpret(state, kioa.self);
         return (async () => {
           switch (r1.kind) {
-            case 'Left': return r1 as Left<E>;
-            case 'Right': {
-              const [s1, a1] = r1.value
+            case "Left":
+              return r1 as Left<E>;
+            case "Right": {
+              const [s1, a1] = r1.value;
               const r2 = await this._interpret(s1, kioa.f(a1, s1));
               return (() => {
                 switch (r2.kind) {
-                  case 'Left': return r2;
-                  case 'Right': {
-                    const [, a2] = r2.value
-                    const s2 = {...s1, [kioa.name]: a2};
+                  case "Left":
+                    return r2;
+                  case "Right": {
+                    const [, a2] = r2.value;
+                    const s2 = { ...s1, [kioa.name]: a2 };
                     return new Right([s2, a2] as [S, A]);
                   }
                 }
@@ -44,9 +49,12 @@ export class InterpreterImpl implements Interpreter {
           }
         })();
       }
-      case 'GetRecord': {
-        const {record} = await this.client.getRecord({app: kioa.app, id: kioa.id});
-        return new Right([{...state, [kioa.name]: record}, record] as [S, A]);
+      case "GetRecord": {
+        const { record } = await this.client.getRecord({
+          app: kioa.app,
+          id: kioa.id,
+        });
+        return new Right([{ ...state, [kioa.name]: record }, record] as [S, A]);
       }
     }
   }
@@ -54,9 +62,10 @@ export class InterpreterImpl implements Interpreter {
   async interpret<E, A>(kioa: KIOA<E, A>): Promise<Either<E, A>> {
     const result = await this._interpret({}, kioa);
     switch (result.kind) {
-      case "Left": return result;
+      case "Left":
+        return result;
       case "Right": {
-        const [, a] = result.value
+        const [, a] = result.value;
         return new Right(a);
       }
     }
