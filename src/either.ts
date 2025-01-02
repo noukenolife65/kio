@@ -1,5 +1,5 @@
 export class Left<E> {
-  readonly kind: 'Left'  = 'Left';
+  readonly kind: 'Left' = 'Left' as const;
   readonly value: E;
   constructor(value: E) {
     this.value = value;
@@ -7,7 +7,7 @@ export class Left<E> {
 }
 
 export class Right<A> {
-  readonly kind: 'Right'  = 'Right';
+  readonly kind: 'Right'  = 'Right' as const;
   readonly value: A;
   constructor(value: A) {
     this.value = value;
