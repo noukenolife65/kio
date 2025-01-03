@@ -1,8 +1,9 @@
 import { Interpreter } from "./interpreter.ts";
 import { Either } from "./either.ts";
+import { KData, KValue } from "./data.ts";
 
 export type KIOS<T extends string, A> = {
-  readonly [K in T]: A;
+  readonly [K in T]: KData<A>;
 };
 
 export class KIO<S extends object, E, A> {
@@ -15,7 +16,7 @@ export class KIO<S extends object, E, A> {
   static succeed<N extends string>(
     name: N,
   ): <A>(a: A) => KIO<KIOS<N, A>, never, A> {
-    return (a) => new KIO({ name, kind: "Succeed", value: a });
+    return (a) => new KIO({ name, kind: "Succeed", value: new KValue(a) });
   }
 
   static fail<E>(e: E): KIO<object, E, never> {
@@ -25,20 +26,20 @@ export class KIO<S extends object, E, A> {
   flatMap<N extends string>(
     name: N,
   ): <S1 extends object, E1, B>(
-    f: (a: A, s: S) => KIO<S1, E1, B>,
+    f: (a: KData<A>, s: S) => KIO<S1, E1, B>,
   ) => KIO<S & KIOS<N, B>, E | E1, B> {
     return (f) =>
       new KIO({
         kind: "FlatMap",
         name,
         self: this.kioa,
-        f: (a, s) => f(a as A, s as S).kioa,
+        f: (a, s) => f(a as KData<A>, s as S).kioa,
       });
   }
 
   map<N extends string>(
     name: N,
-  ): <B>(f: (a: A, s: S) => B) => KIO<S & KIOS<N, B>, E, B> {
+  ): <B>(f: (a: KData<A>, s: S) => KData<B>) => KIO<S & KIOS<N, B>, E, B> {
     return (f) =>
       this.flatMap(name)((a, s) => {
         return new KIO({ kind: "Succeed", name, value: f(a, s) });
@@ -71,7 +72,7 @@ export type KIOA<E, A> =
       self: KIOA<unknown, unknown>;
       f: (a: unknown, s: unknown) => KIOA<E, A>;
     }
-  | { kind: "Succeed"; name: string; value: A }
+  | { kind: "Succeed"; name: string; value: KData<A> }
   | { kind: "Fail"; error: E }
   | {
       kind: "GetRecord";
