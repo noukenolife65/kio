@@ -1,6 +1,7 @@
 import { KIOA } from "./kio.ts";
 import { Either, Left, Right } from "./either.ts";
 import { KintoneClient } from "./client.ts";
+import { KData, KRecord } from "./data.ts";
 
 export interface Interpreter {
   interpret<E, A>(kioa: KIOA<E, A>): Promise<Either<E, A>>;
@@ -16,11 +17,13 @@ export class InterpreterImpl implements Interpreter {
   private async _interpret<S extends object, E, A>(
     state: S,
     kioa: KIOA<E, A>,
-  ): Promise<Either<E, [S, A]>> {
+  ): Promise<Either<E, [S, KData<A>]>> {
     switch (kioa.kind) {
       case "Succeed": {
         const newState = { ...state, [kioa.name]: kioa.value };
-        return Promise.resolve(new Right([newState, kioa.value] as [S, A]));
+        return Promise.resolve(
+          new Right([newState, kioa.value] as [S, KData<A>]),
+        );
       }
       case "Fail": {
         return Promise.resolve(new Left(kioa.error));
@@ -41,7 +44,7 @@ export class InterpreterImpl implements Interpreter {
                   case "Right": {
                     const [, a2] = r2.value;
                     const s2 = { ...s1, [kioa.name]: a2 };
-                    return new Right([s2, a2] as [S, A]);
+                    return new Right([s2, a2] as [S, KData<A>]);
                   }
                 }
               })();
@@ -54,7 +57,12 @@ export class InterpreterImpl implements Interpreter {
           app: kioa.app,
           id: kioa.id,
         });
-        return new Right([{ ...state, [kioa.name]: record }, record] as [S, A]);
+        const revision = record.$revision.value;
+        const kRecord = new KRecord(record, kioa.app, revision);
+        return new Right([{ ...state, [kioa.name]: kRecord }, kRecord] as [
+          S,
+          KData<A>,
+        ]);
       }
     }
   }
@@ -66,7 +74,7 @@ export class InterpreterImpl implements Interpreter {
         return result;
       case "Right": {
         const [, a] = result.value;
-        return new Right(a);
+        return new Right(a.value);
       }
     }
   }

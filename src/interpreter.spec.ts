@@ -3,15 +3,23 @@ import { KIO } from "./kio.ts";
 import { InterpreterImpl } from "./interpreter.ts";
 import { Left, Right } from "./either.ts";
 import { KintoneClient } from "./client.ts";
+import { KRecord, KValue } from "./data.ts";
 
 describe("InterpreterImpl", () => {
   class FakeKintoneClient implements KintoneClient {
-    async getRecord<T extends { [k: string]: unknown }>(params: {
+    async getRecord<
+      T extends {
+        $revision: { value: string | number };
+      } & { [k: string]: unknown },
+    >(_params: {
       app: string | number;
       id: string | number;
     }): Promise<{ record: T }> {
       return {
-        record: params as unknown as T,
+        record: {
+          test: { value: 1 },
+          $revision: { value: 2 },
+        } as unknown as T,
       };
     }
   }
@@ -22,7 +30,7 @@ describe("InterpreterImpl", () => {
     it("Succeed", async () => {
       const result = await KIO.succeed("succeed")(1)
         .map("map")((a, s) => {
-          expect(s).toStrictEqual({ succeed: 1 });
+          expect(s).toStrictEqual({ succeed: new KValue(1) });
           return a;
         })
         .commit(interpreter);
@@ -39,8 +47,8 @@ describe("InterpreterImpl", () => {
     it("FlatMap", async () => {
       const success = await KIO.succeed("succeed1")(1)
         .flatMap("flatMap")((a, s) => {
-          expect(s).toStrictEqual({ succeed1: 1 });
-          return KIO.succeed("succeed2")(a + 1);
+          expect(s).toStrictEqual({ succeed1: new KValue(1) });
+          return KIO.succeed("succeed2")(a.value + 1);
         })
         .commit(interpreter);
       expect(success).toStrictEqual(new Right(2));
@@ -54,13 +62,16 @@ describe("InterpreterImpl", () => {
       expect(failure).toStrictEqual(new Left("error"));
     });
     it("GetRecord", async () => {
-      const expectedRecord = { app: 1, id: 1 };
+      const expectedRecord = { test: { value: 1 }, $revision: { value: 2 } };
       const result = await KIO.succeed("succeed")(1)
         .flatMap("record")(() =>
           KIO.getRecord("record")<typeof expectedRecord>({ app: 1, id: 1 }),
         )
         .map("map")((a, s) => {
-          expect(s).toStrictEqual({ succeed: 1, record: expectedRecord });
+          expect(s).toStrictEqual({
+            succeed: new KValue(1),
+            record: new KRecord(expectedRecord, 1, 2),
+          });
           return a;
         })
         .commit(interpreter);
