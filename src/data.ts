@@ -26,4 +26,15 @@ export class KRecord<T> {
   }
 }
 
-export type KData<T> = KValue<T> | KRecord<T>;
+export class KRecordList<T> {
+  readonly kind: "KRecordList" = "KRecordList" as const;
+  readonly records: KRecord<T>[];
+  constructor(records: KRecord<T>[]) {
+    this.records = records;
+  }
+  get value(): T[] {
+    return this.records.map((record) => record.value);
+  }
+}
+
+export type KData<T> = KValue<T> | KRecord<T> | KRecordList<T>;
