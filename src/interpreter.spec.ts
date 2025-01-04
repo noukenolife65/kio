@@ -2,25 +2,32 @@ import { describe, expect, it } from "vitest";
 import { KIO } from "./kio.ts";
 import { InterpreterImpl } from "./interpreter.ts";
 import { Left, Right } from "./either.ts";
-import { KintoneClient } from "./client.ts";
+import {
+  GetRecordParams,
+  GetRecordResponse,
+  GetRecordsParams,
+  GetRecordsResponse,
+  KintoneClient,
+} from "./client.ts";
 import { KRecord, KValue } from "./data.ts";
 
 describe("InterpreterImpl", () => {
   class FakeKintoneClient implements KintoneClient {
-    async getRecord<
-      T extends {
-        $revision: { value: string | number };
-      } & { [k: string]: unknown },
-    >(_params: {
-      app: string | number;
-      id: string | number;
-    }): Promise<{ record: T }> {
+    async getRecord(_params: GetRecordParams): Promise<GetRecordResponse> {
       return {
         record: {
           test: { value: 1 },
           $revision: { value: 2 },
-        } as unknown as T,
+        },
       };
+    }
+    async getRecords(_params: GetRecordsParams): Promise<GetRecordsResponse> {
+      return [
+        {
+          test: { value: 1 },
+          $revision: { value: 2 },
+        },
+      ];
     }
   }
   const client = new FakeKintoneClient();
