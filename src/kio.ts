@@ -1,15 +1,15 @@
 import { Interpreter } from "./interpreter.ts";
 import { Either } from "./either.ts";
-import { KData, KRecord, KValue } from "./data.ts";
+import { KData, KRecord, KRecordList, KValue } from "./data.ts";
 
 export type KIOS<T extends string, A, D extends KData<A> = KData<A>> = {
   readonly [K in T]: D;
 };
 
 export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
-  private kioa: KIOA<E, A>;
+  private kioa: KIOA<E, A, D>;
 
-  private constructor(kioa: KIOA<E, A>) {
+  private constructor(kioa: KIOA<E, A, D>) {
     this.kioa = kioa;
   }
 
@@ -62,23 +62,47 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
       });
   }
 
-  async commit(interpreter: Interpreter): Promise<Either<E, A>> {
+  static getRecords<N extends string>(
+    name: N,
+  ): <R extends object>(args: {
+    app: number | string;
+    fields?: string[];
+    query?: string;
+  }) => KIO<object, never, R, KRecordList<R>> {
+    return (args) =>
+      new KIO({
+        kind: "GetRecords",
+        name,
+        ...args,
+      });
+  }
+
+  async commit(
+    interpreter: Interpreter,
+  ): Promise<Either<E, D extends KRecordList<A> ? A[] : A>> {
     return interpreter.interpret(this.kioa);
   }
 }
 
-export type KIOA<E, A> =
+export type KIOA<E, A, D extends KData<A>> =
   | {
       kind: "FlatMap";
       name: string;
-      self: KIOA<unknown, unknown>;
-      f: (a: unknown, s: unknown) => KIOA<E, A>;
+      self: KIOA<unknown, unknown, KData<unknown>>;
+      f: (a: unknown, s: unknown) => KIOA<E, A, D>;
     }
-  | { kind: "Succeed"; name: string; value: KData<A> }
+  | { kind: "Succeed"; name: string; value: D }
   | { kind: "Fail"; error: E }
   | {
       kind: "GetRecord";
       name: string;
       app: number | string;
       id: number | string;
+    }
+  | {
+      kind: "GetRecords";
+      name: string;
+      app: number | string;
+      fields?: string[];
+      query?: string;
     };

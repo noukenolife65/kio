@@ -3,9 +3,7 @@ import { KIO } from "./kio.ts";
 import { InterpreterImpl } from "./interpreter.ts";
 import { Left, Right } from "./either.ts";
 import {
-  GetRecordParams,
   GetRecordResponse,
-  GetRecordsParams,
   GetRecordsResponse,
   KintoneClient,
 } from "./client.ts";
@@ -13,7 +11,7 @@ import { KRecord, KValue } from "./data.ts";
 
 describe("InterpreterImpl", () => {
   class FakeKintoneClient implements KintoneClient {
-    async getRecord(_params: GetRecordParams): Promise<GetRecordResponse> {
+    async getRecord(): Promise<GetRecordResponse> {
       return {
         record: {
           test: { value: 1 },
@@ -21,7 +19,7 @@ describe("InterpreterImpl", () => {
         },
       };
     }
-    async getRecords(_params: GetRecordsParams): Promise<GetRecordsResponse> {
+    async getRecords(): Promise<GetRecordsResponse> {
       return [
         {
           test: { value: 1 },
@@ -83,6 +81,17 @@ describe("InterpreterImpl", () => {
         })
         .commit(interpreter);
       expect(result).toStrictEqual(new Right(expectedRecord));
+    });
+    it("GetRecords", async () => {
+      const expectedRecord = { test: { value: 1 }, $revision: { value: 2 } };
+      const result = await KIO.succeed("succeed")(1)
+        .flatMap("records")(() =>
+          KIO.getRecords("records")<typeof expectedRecord>({
+            app: 1,
+          }),
+        )
+        .commit(interpreter);
+      expect(result).toStrictEqual(new Right([expectedRecord]));
     });
   });
 });
