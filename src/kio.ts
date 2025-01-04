@@ -40,7 +40,7 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
   map<N extends string>(
     name: N,
   ): <B, D1 extends KData<B>>(
-    f: (a: D, s: S) => KData<B>,
+    f: (a: D, s: S) => D1,
   ) => KIO<S & KIOS<N, B, D1>, E, B, D1> {
     return (f) =>
       this.flatMap(name)((a, s) => {
