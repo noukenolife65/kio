@@ -5,8 +5,8 @@ export class KValue<T> {
     this.value = value;
   }
 
-  update(value: T): KValue<T> {
-    return new KValue(value);
+  update(f: (value: T) => T): KValue<T> {
+    return new KValue(f(this.value));
   }
 }
 
@@ -21,8 +21,8 @@ export class KRecord<T> {
     this.revision = revision;
   }
 
-  update(value: T): KRecord<T> {
-    return new KRecord(value, this.app, this.revision);
+  update(f: (value: T) => T): KRecord<T> {
+    return new KRecord(f(this.value), this.app, this.revision);
   }
 }
 
