@@ -1,12 +1,12 @@
 import { Interpreter } from "./interpreter.ts";
 import { Either } from "./either.ts";
-import { KData, KValue } from "./data.ts";
+import { KData, KRecord, KValue } from "./data.ts";
 
-export type KIOS<T extends string, A> = {
-  readonly [K in T]: KData<A>;
+export type KIOS<T extends string, A, D extends KData<A> = KData<A>> = {
+  readonly [K in T]: D;
 };
 
-export class KIO<S extends object, E, A> {
+export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
   private kioa: KIOA<E, A>;
 
   private constructor(kioa: KIOA<E, A>) {
@@ -15,31 +15,33 @@ export class KIO<S extends object, E, A> {
 
   static succeed<N extends string>(
     name: N,
-  ): <A>(a: A) => KIO<KIOS<N, A>, never, A> {
+  ): <A>(a: A) => KIO<KIOS<N, A, KValue<A>>, never, A, KValue<A>> {
     return (a) => new KIO({ name, kind: "Succeed", value: new KValue(a) });
   }
 
-  static fail<E>(e: E): KIO<object, E, never> {
+  static fail<E>(e: E): KIO<object, E, never, never> {
     return new KIO({ kind: "Fail", error: e });
   }
 
   flatMap<N extends string>(
     name: N,
-  ): <S1 extends object, E1, B>(
-    f: (a: KData<A>, s: S) => KIO<S1, E1, B>,
-  ) => KIO<S & KIOS<N, B>, E | E1, B> {
+  ): <S1 extends object, E1, B, D1 extends KData<B>>(
+    f: (a: D, s: S) => KIO<S1, E1, B, D1>,
+  ) => KIO<S & KIOS<N, B, D1>, E | E1, B, D1> {
     return (f) =>
       new KIO({
         kind: "FlatMap",
         name,
         self: this.kioa,
-        f: (a, s) => f(a as KData<A>, s as S).kioa,
+        f: (a, s) => f(a as D, s as S).kioa,
       });
   }
 
   map<N extends string>(
     name: N,
-  ): <B>(f: (a: KData<A>, s: S) => KData<B>) => KIO<S & KIOS<N, B>, E, B> {
+  ): <B, D1 extends KData<B>>(
+    f: (a: D, s: S) => KData<B>,
+  ) => KIO<S & KIOS<N, B, D1>, E, B, D1> {
     return (f) =>
       this.flatMap(name)((a, s) => {
         return new KIO({ kind: "Succeed", name, value: f(a, s) });
@@ -51,7 +53,7 @@ export class KIO<S extends object, E, A> {
   ): <R extends object>(args: {
     app: number | string;
     id: number | string;
-  }) => KIO<object, never, R> {
+  }) => KIO<object, never, R, KRecord<R>> {
     return (args) =>
       new KIO({
         kind: "GetRecord",

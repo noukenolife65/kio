@@ -4,6 +4,10 @@ export class KValue<T> {
   constructor(value: T) {
     this.value = value;
   }
+
+  update(value: T): KValue<T> {
+    return new KValue(value);
+  }
 }
 
 export class KRecord<T> {
@@ -15,6 +19,10 @@ export class KRecord<T> {
     this.value = value;
     this.app = app;
     this.revision = revision;
+  }
+
+  update(value: T): KRecord<T> {
+    return new KRecord(value, this.app, this.revision);
   }
 }
 
