@@ -35,6 +35,10 @@ export class KRecordList<T> {
   get value(): T[] {
     return this.records.map((record) => record.value);
   }
+
+  update(f: (value: T) => T): KRecordList<T> {
+    return new KRecordList(this.records.map((record) => record.update(f)));
+  }
 }
 
 export type KData<T> = KValue<T> | KRecord<T> | KRecordList<T>;
