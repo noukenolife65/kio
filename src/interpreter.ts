@@ -65,7 +65,8 @@ export class InterpreterImpl implements Interpreter {
         ]);
       }
       case "GetRecords": {
-        const { name, app, fields, query } = kioa;
+        const { name, app, fields: orgFields, query } = kioa;
+        const fields = orgFields ? [...orgFields, "$revision"] : undefined;
         const result = await this.client.getRecords({
           app,
           fields,
