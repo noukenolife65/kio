@@ -1,11 +1,13 @@
 import { KintoneRestAPIClient } from "@kintone/rest-api-client";
 
+export type IdField = { $id: { value: string | number } };
 export type RevisionField = { $revision: { value: string | number } };
 export type GetRecordParams = {
   app: string | number;
   id: string | number;
 };
-export type GetRecordResponseRecord = { [k: string]: unknown } & RevisionField;
+export type GetRecordResponseRecord = { [k: string]: unknown } & IdField &
+  RevisionField;
 export type GetRecordResponse = {
   record: GetRecordResponseRecord;
 };
@@ -15,11 +17,11 @@ export type GetRecordsParams = {
   query?: string;
   totalCount?: boolean;
 };
-export type GetRecordsResponse = ({ [k: string]: unknown } & RevisionField)[];
+export type GetRecordsResponse<R> = (R & { [k: string]: unknown })[];
 
 export interface KintoneClient {
   getRecord(params: GetRecordParams): Promise<GetRecordResponse>;
-  getRecords(params: GetRecordsParams): Promise<GetRecordsResponse>;
+  getRecords<R>(params: GetRecordsParams): Promise<GetRecordsResponse<R>>;
 }
 
 export class KintoneClientImpl implements KintoneClient {
@@ -36,8 +38,10 @@ export class KintoneClientImpl implements KintoneClient {
     return result as unknown as { record: T };
   }
 
-  async getRecords(params: GetRecordsParams): Promise<GetRecordsResponse> {
+  async getRecords<R>(
+    params: GetRecordsParams,
+  ): Promise<GetRecordsResponse<R>> {
     const { records } = await this.client.record.getRecords(params);
-    return records as unknown as GetRecordsResponse;
+    return records as unknown as GetRecordsResponse<R>;
   }
 }

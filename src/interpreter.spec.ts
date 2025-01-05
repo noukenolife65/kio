@@ -21,17 +21,18 @@ describe("InterpreterImpl", () => {
           return {
             record: {
               test: { value: 1 },
+              $id: { value: 1 },
               $revision: { value: 2 },
             },
           };
         }
-        async getRecords(): Promise<GetRecordsResponse> {
+        async getRecords<R>(): Promise<GetRecordsResponse<R>> {
           return [
             {
               test: { value: 1 },
               $revision: { value: 2 },
             },
-          ];
+          ] as unknown as GetRecordsResponse<R>;
         }
       }
       const fakeClient = new FakeKintoneClient();
@@ -97,6 +98,7 @@ describe("InterpreterImpl", () => {
               record: new KRecord(
                 expectedRecord,
                 1,
+                expectedRecord.$id.value,
                 expectedRecord.$revision.value,
               ),
             });
@@ -110,7 +112,7 @@ describe("InterpreterImpl", () => {
           Pick<KVPairs<SavedFields>, "text" | "$revision">
         >({
           app: 1,
-          fields: ["text", "$revision"],
+          fields: ["text", "$revision", "$id"],
           query: "$id = 1",
         });
         const result = await KIO.succeed("succeed")(1)
