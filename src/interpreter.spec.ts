@@ -6,33 +6,34 @@ import {
   GetRecordResponse,
   GetRecordsResponse,
   KintoneClient,
+  KintoneClientImpl,
 } from "./client.ts";
 import { KRecord, KValue } from "./data.ts";
+import { KintoneRestAPIClient } from "@kintone/rest-api-client";
 
 describe("InterpreterImpl", () => {
-  class FakeKintoneClient implements KintoneClient {
-    async getRecord(): Promise<GetRecordResponse> {
-      return {
-        record: {
-          test: { value: 1 },
-          $revision: { value: 2 },
-        },
-      };
-    }
-    async getRecords(): Promise<GetRecordsResponse> {
-      return [
-        {
-          test: { value: 1 },
-          $revision: { value: 2 },
-        },
-      ];
-    }
-  }
-  const client = new FakeKintoneClient();
-
-  const interpreter = new InterpreterImpl(client);
   describe("interpret", () => {
     describe("Basic Operations", () => {
+      class FakeKintoneClient implements KintoneClient {
+        async getRecord(): Promise<GetRecordResponse> {
+          return {
+            record: {
+              test: { value: 1 },
+              $revision: { value: 2 },
+            },
+          };
+        }
+        async getRecords(): Promise<GetRecordsResponse> {
+          return [
+            {
+              test: { value: 1 },
+              $revision: { value: 2 },
+            },
+          ];
+        }
+      }
+      const fakeClient = new FakeKintoneClient();
+      const interpreter = new InterpreterImpl(fakeClient);
       it("Succeed", async () => {
         const result = await KIO.succeed("succeed")(1)
           .map("map")((a, s) => {
@@ -68,7 +69,16 @@ describe("InterpreterImpl", () => {
         expect(failure).toStrictEqual(new Left("error"));
       });
     });
-    describe("Kintone Operations", () => {
+    describe.skip("Kintone Operations", () => {
+      const client = new KintoneClientImpl(
+        new KintoneRestAPIClient({
+          baseUrl: process.env.KINTONE_BASE_URL,
+          auth: {
+            apiToken: process.env.KINTONE_API_TOKEN,
+          },
+        }),
+      );
+      const interpreter = new InterpreterImpl(client);
       it("GetRecord", async () => {
         const expectedRecord = { test: { value: 1 }, $revision: { value: 2 } };
         const result = await KIO.succeed("succeed")(1)
