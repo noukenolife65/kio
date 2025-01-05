@@ -10,6 +10,8 @@ import {
 } from "./client.ts";
 import { KRecord, KValue } from "./data.ts";
 import { KintoneRestAPIClient } from "@kintone/rest-api-client";
+import { ArrayElm, KVPairs } from "./helper.ts";
+import SavedFields = kintone.types.SavedFields;
 
 describe("InterpreterImpl", () => {
   describe("interpret", () => {
@@ -69,18 +71,22 @@ describe("InterpreterImpl", () => {
         expect(failure).toStrictEqual(new Left("error"));
       });
     });
-    describe.skip("Kintone Operations", () => {
-      const client = new KintoneClientImpl(
-        new KintoneRestAPIClient({
-          baseUrl: process.env.KINTONE_BASE_URL,
-          auth: {
-            apiToken: process.env.KINTONE_API_TOKEN,
-          },
-        }),
-      );
+    describe("Kintone Operations", () => {
+      const kClient = new KintoneRestAPIClient({
+        baseUrl: process.env.KINTONE_BASE_URL,
+        auth: {
+          apiToken: process.env.KINTONE_API_TOKEN,
+        },
+      });
+      const client = new KintoneClientImpl(kClient);
       const interpreter = new InterpreterImpl(client);
       it("GetRecord", async () => {
-        const expectedRecord = { test: { value: 1 }, $revision: { value: 2 } };
+        const { record: expectedRecord } = await kClient.record.getRecord<
+          KVPairs<SavedFields>
+        >({
+          app: 1,
+          id: 1,
+        });
         const result = await KIO.succeed("succeed")(1)
           .flatMap("record")(() =>
             KIO.getRecord("record")<typeof expectedRecord>({ app: 1, id: 1 }),
@@ -88,7 +94,11 @@ describe("InterpreterImpl", () => {
           .map("map")((a, s) => {
             expect(s).toStrictEqual({
               succeed: new KValue(1),
-              record: new KRecord(expectedRecord, 1, 2),
+              record: new KRecord(
+                expectedRecord,
+                1,
+                expectedRecord.$revision.value,
+              ),
             });
             return a;
           })
@@ -96,15 +106,23 @@ describe("InterpreterImpl", () => {
         expect(result).toStrictEqual(new Right(expectedRecord));
       });
       it("GetRecords", async () => {
-        const expectedRecord = { test: { value: 1 }, $revision: { value: 2 } };
+        const { records: expectedRecords } = await kClient.record.getRecords<
+          Pick<KVPairs<SavedFields>, "text" | "$revision">
+        >({
+          app: 1,
+          fields: ["text", "$revision"],
+          query: "$id = 1",
+        });
         const result = await KIO.succeed("succeed")(1)
           .flatMap("records")(() =>
-            KIO.getRecords("records")<typeof expectedRecord>({
+            KIO.getRecords("records")<ArrayElm<typeof expectedRecords>>({
               app: 1,
+              fields: ["text"],
+              query: "$id = 1",
             }),
           )
           .commit(interpreter);
-        expect(result).toStrictEqual(new Right([expectedRecord]));
+        expect(result).toStrictEqual(new Right(expectedRecords));
       });
     });
   });
