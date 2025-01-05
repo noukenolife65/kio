@@ -1,6 +1,6 @@
 import { KIOA } from "./kio.ts";
 import { Either, Left, Right } from "./either.ts";
-import { KintoneClient } from "./client.ts";
+import { IdField, KintoneClient, RevisionField } from "./client.ts";
 import { KData, KRecord, KRecordList } from "./data.ts";
 
 export interface Interpreter {
@@ -58,7 +58,8 @@ export class InterpreterImpl implements Interpreter {
           id: kioa.id,
         });
         const revision = record.$revision.value;
-        const kRecord = new KRecord(record, kioa.app, revision);
+        const id = record.$id.value;
+        const kRecord = new KRecord(record, kioa.app, id, revision);
         return new Right([{ ...state, [kioa.name]: kRecord }, kRecord] as [
           S,
           D,
@@ -66,15 +67,23 @@ export class InterpreterImpl implements Interpreter {
       }
       case "GetRecords": {
         const { name, app, fields: orgFields, query } = kioa;
-        const fields = orgFields ? [...orgFields, "$revision"] : undefined;
-        const result = await this.client.getRecords({
+        const fields = orgFields
+          ? [...orgFields, "$id", "$revision"]
+          : undefined;
+        const result = await this.client.getRecords<IdField & RevisionField>({
           app,
           fields,
           query,
         });
         const kRecordList = new KRecordList(
           result.map(
-            (record) => new KRecord(record, app, record.$revision.value),
+            (record) =>
+              new KRecord(
+                record,
+                app,
+                record.$id.value,
+                record.$revision.value,
+              ),
           ),
         );
         return new Right([{ ...state, [name]: kRecordList }, kRecordList] as [
