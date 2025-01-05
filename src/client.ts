@@ -37,11 +37,7 @@ export class KintoneClientImpl implements KintoneClient {
   }
 
   async getRecords(params: GetRecordsParams): Promise<GetRecordsResponse> {
-    const _params: GetRecordsParams = {
-      ...params,
-      fields: params.fields ? [...params.fields, "$revision"] : undefined,
-    };
-    const { records } = await this.client.record.getRecords(_params);
+    const { records } = await this.client.record.getRecords(params);
     return records as unknown as GetRecordsResponse;
   }
 }
