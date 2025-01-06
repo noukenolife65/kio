@@ -3,8 +3,10 @@ import { KIO } from "./kio.ts";
 import { InterpreterImpl } from "./interpreter.ts";
 import { Left, Right } from "./either.ts";
 import {
+  BulkRequestResponse,
   GetRecordResponse,
   GetRecordsResponse,
+  KFields,
   KintoneClient,
   KintoneClientImpl,
 } from "./client.ts";
@@ -12,6 +14,7 @@ import { KRecord, KValue } from "./data.ts";
 import { KintoneRestAPIClient } from "@kintone/rest-api-client";
 import { ArrayElm, KVPairs } from "./helper.ts";
 import SavedFields = kintone.types.SavedFields;
+import Fields = kintone.types.Fields;
 
 describe("InterpreterImpl", () => {
   describe("interpret", () => {
@@ -26,13 +29,16 @@ describe("InterpreterImpl", () => {
             },
           };
         }
-        async getRecords<R>(): Promise<GetRecordsResponse<R>> {
+        async getRecords<R extends KFields>(): Promise<GetRecordsResponse<R>> {
           return [
             {
               test: { value: 1 },
               $revision: { value: 2 },
             },
           ] as unknown as GetRecordsResponse<R>;
+        }
+        async bulkRequest(): Promise<BulkRequestResponse> {
+          return;
         }
       }
       const fakeClient = new FakeKintoneClient();
@@ -125,6 +131,31 @@ describe("InterpreterImpl", () => {
           )
           .commit(interpreter);
         expect(result).toStrictEqual(new Right(expectedRecords));
+      });
+      it("UpdateRecord", async () => {
+        const { record: savedRecord } = await kClient.record.getRecord<
+          KVPairs<SavedFields>
+        >({
+          app: 1,
+          id: 1,
+        });
+        const newText = `test_${new Date().toTimeString()}`;
+        const result = await KIO.succeed("succeed")(1)
+          .flatMap("getRecord")(() =>
+            KIO.getRecord("getRecord")<KVPairs<Fields>>({ app: 1, id: 1 }),
+          )
+          .flatMap("updateRecord")((a) =>
+            KIO.updateRecord("updateRecord")({
+              record: a.update((value) => ({
+                ...value,
+                text: { value: newText },
+              })),
+            }),
+          )
+          .commit(interpreter);
+        expect(result).toStrictEqual(
+          new Right({ ...savedRecord, text: { value: newText } }),
+        );
       });
     });
   });

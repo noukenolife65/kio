@@ -1,6 +1,12 @@
 import { KIOA } from "./kio.ts";
 import { Either, Left, Right } from "./either.ts";
-import { IdField, KintoneClient, RevisionField } from "./client.ts";
+import {
+  BulkRequest,
+  IdField,
+  KintoneClient,
+  RevisionField,
+  UpdateRecordRequest,
+} from "./client.ts";
 import { KData, KRecord, KRecordList } from "./data.ts";
 
 export interface Interpreter {
@@ -17,34 +23,49 @@ export class InterpreterImpl implements Interpreter {
   }
 
   private async _interpret<S extends object, E, A, D extends KData<A>>(
+    bulkRequests: BulkRequest[],
     state: S,
     kioa: KIOA<E, A, D>,
-  ): Promise<Either<E, [S, D]>> {
+  ): Promise<Either<E, [BulkRequest[], S, D]>> {
     switch (kioa.kind) {
       case "Succeed": {
         const newState = { ...state, [kioa.name]: kioa.value };
-        return Promise.resolve(new Right([newState, kioa.value] as [S, D]));
+        return Promise.resolve(
+          new Right([bulkRequests, newState, kioa.value] as [
+            BulkRequest[],
+            S,
+            D,
+          ]),
+        );
       }
       case "Fail": {
         return Promise.resolve(new Left(kioa.error));
       }
       case "FlatMap": {
-        const r1 = await this._interpret(state, kioa.self);
+        const r1 = await this._interpret(bulkRequests, state, kioa.self);
         return (async () => {
           switch (r1.kind) {
             case "Left":
               return r1 as Left<E>;
             case "Right": {
-              const [s1, a1] = r1.value;
-              const r2 = await this._interpret(s1, kioa.f(a1, s1));
+              const [bulkRequests1, s1, a1] = r1.value;
+              const r2 = await this._interpret(
+                bulkRequests1,
+                s1,
+                kioa.f(a1, s1),
+              );
               return (() => {
                 switch (r2.kind) {
                   case "Left":
                     return r2;
                   case "Right": {
-                    const [, a2] = r2.value;
+                    const [bulkRequests2, , a2] = r2.value;
                     const s2 = { ...s1, [kioa.name]: a2 };
-                    return new Right([s2, a2] as [S, D]);
+                    return new Right([
+                      [...bulkRequests1, ...bulkRequests2],
+                      s2,
+                      a2,
+                    ] as [BulkRequest[], S, D]);
                   }
                 }
               })();
@@ -60,10 +81,11 @@ export class InterpreterImpl implements Interpreter {
         const revision = record.$revision.value;
         const id = record.$id.value;
         const kRecord = new KRecord(record, kioa.app, id, revision);
-        return new Right([{ ...state, [kioa.name]: kRecord }, kRecord] as [
-          S,
-          D,
-        ]);
+        return new Right([
+          bulkRequests,
+          { ...state, [kioa.name]: kRecord },
+          kRecord,
+        ] as [BulkRequest[], S, D]);
       }
       case "GetRecords": {
         const { name, app, fields: orgFields, query } = kioa;
@@ -86,10 +108,43 @@ export class InterpreterImpl implements Interpreter {
               ),
           ),
         );
-        return new Right([{ ...state, [name]: kRecordList }, kRecordList] as [
-          S,
-          D,
-        ]);
+        return new Right([
+          bulkRequests,
+          { ...state, [name]: kRecordList },
+          kRecordList,
+        ] as [BulkRequest[], S, D]);
+      }
+      case "UpdateRecord": {
+        const { name, record } = kioa;
+        const updatingRecord = Object.fromEntries(
+          Object.entries(record.value).filter(([_, { type }]) => {
+            return (
+              !type ||
+              ![
+                "RECORD_NUMBER",
+                "MODIFIER",
+                "CREATOR",
+                "UPDATED_TIME",
+                "CREATED_TIME",
+              ].includes(type)
+            );
+          }),
+        );
+        const updateRecordRequest: UpdateRecordRequest = {
+          method: "PUT",
+          api: "/k/v1/record.json",
+          payload: {
+            app: record.app,
+            id: record.id,
+            record: updatingRecord,
+            revision: record.revision,
+          },
+        };
+        return new Right([
+          [...bulkRequests, updateRecordRequest],
+          { ...state, [name]: record },
+          record,
+        ] as [BulkRequest[], S, D]);
       }
     }
   }
@@ -97,12 +152,15 @@ export class InterpreterImpl implements Interpreter {
   async interpret<E, A, D extends KData<A>>(
     kioa: KIOA<E, A, D>,
   ): Promise<Either<E, D extends KRecordList<A> ? A[] : A>> {
-    const result = await this._interpret({}, kioa);
+    const result = await this._interpret([], {}, kioa);
     switch (result.kind) {
       case "Left":
         return result;
       case "Right": {
-        const [, a] = result.value;
+        const [bulkRequests, , a] = result.value;
+        if (bulkRequests.length > 0) {
+          await this.client.bulkRequest({ requests: bulkRequests });
+        }
         return new Right(a.value as D extends KRecordList<A> ? A[] : A);
       }
     }
