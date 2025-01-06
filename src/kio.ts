@@ -1,6 +1,7 @@
 import { Interpreter } from "./interpreter.ts";
 import { Either } from "./either.ts";
 import { KData, KRecord, KRecordList, KValue } from "./data.ts";
+import { KFields } from "./client.ts";
 
 export type KIOS<T extends string, A, D extends KData<A> = KData<A>> = {
   readonly [K in T]: D;
@@ -50,7 +51,7 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
 
   static getRecord<N extends string>(
     name: N,
-  ): <R extends object>(args: {
+  ): <R extends KFields>(args: {
     app: number | string;
     id: number | string;
   }) => KIO<object, never, R, KRecord<R>> {
@@ -64,7 +65,7 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
 
   static getRecords<N extends string>(
     name: N,
-  ): <R extends object>(args: {
+  ): <R extends KFields>(args: {
     app: number | string;
     fields?: string[];
     query?: string;
@@ -72,6 +73,19 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
     return (args) =>
       new KIO({
         kind: "GetRecords",
+        name,
+        ...args,
+      });
+  }
+
+  static updateRecord<N extends string>(
+    name: N,
+  ): <R extends KFields>(args: {
+    record: KRecord<R>;
+  }) => KIO<object, never, R, KRecord<R>> {
+    return (args) =>
+      new KIO({
+        kind: "UpdateRecord",
         name,
         ...args,
       });
@@ -105,4 +119,9 @@ export type KIOA<E, A, D extends KData<A>> =
       app: number | string;
       fields?: string[];
       query?: string;
+    }
+  | {
+      kind: "UpdateRecord";
+      name: string;
+      record: KRecord<KFields>;
     };
