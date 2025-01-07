@@ -6,11 +6,10 @@ import {
   BulkRequestResponse,
   GetRecordResponse,
   GetRecordsResponse,
-  KFields,
   KintoneClient,
   KintoneClientImpl,
 } from "./client.ts";
-import { KRecord, KValue } from "./data.ts";
+import { KFields, KRecord, KValue } from "./data.ts";
 import { KintoneRestAPIClient } from "@kintone/rest-api-client";
 import { ArrayElm, KVPairs } from "./helper.ts";
 import SavedFields = kintone.types.SavedFields;

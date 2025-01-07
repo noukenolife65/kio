@@ -1,3 +1,12 @@
+export type KFields = {
+  [k: string]: {
+    type?: string;
+    value: unknown;
+  };
+};
+export type KIdField = { $id: { value: string | number } };
+export type KRevisionField = { $revision: { value: string | number } };
+
 export class KValue<T> {
   readonly kind: "KValue" = "KValue" as const;
   readonly value: T;

@@ -1,13 +1,13 @@
 import { KIOA } from "./kio.ts";
 import { Either, Left, Right } from "./either.ts";
+import { BulkRequest, KintoneClient, UpdateRecordRequest } from "./client.ts";
 import {
-  BulkRequest,
-  IdField,
-  KintoneClient,
-  RevisionField,
-  UpdateRecordRequest,
-} from "./client.ts";
-import { KData, KRecord, KRecordList } from "./data.ts";
+  KIdField,
+  KData,
+  KRecord,
+  KRecordList,
+  KRevisionField,
+} from "./data.ts";
 
 export interface Interpreter {
   interpret<E, A, D extends KData<A>>(
@@ -92,7 +92,7 @@ export class InterpreterImpl implements Interpreter {
         const fields = orgFields
           ? [...orgFields, "$id", "$revision"]
           : undefined;
-        const result = await this.client.getRecords<IdField & RevisionField>({
+        const result = await this.client.getRecords<KIdField & KRevisionField>({
           app,
           fields,
           query,
@@ -117,7 +117,7 @@ export class InterpreterImpl implements Interpreter {
       case "UpdateRecord": {
         const { name, record } = kioa;
         const updatingRecord = Object.fromEntries(
-          Object.entries(record.value).filter(([_, { type }]) => {
+          Object.entries(record.value).filter(([, { type }]) => {
             return (
               !type ||
               ![

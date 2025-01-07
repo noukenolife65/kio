@@ -1,18 +1,11 @@
 import { KintoneRestAPIClient } from "@kintone/rest-api-client";
+import { KIdField, KFields, KRevisionField } from "./data.ts";
 
-export type KFields = {
-  [k: string]: {
-    type?: string;
-    value: unknown;
-  };
-};
-export type IdField = { $id: { value: string | number } };
-export type RevisionField = { $revision: { value: string | number } };
 export type GetRecordParams = {
   app: string | number;
   id: string | number;
 };
-export type GetRecordResponseRecord = KFields & IdField & RevisionField;
+export type GetRecordResponseRecord = KFields & KIdField & KRevisionField;
 export type GetRecordResponse = {
   record: GetRecordResponseRecord;
 };

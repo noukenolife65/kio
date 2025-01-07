@@ -1,7 +1,6 @@
 import { Interpreter } from "./interpreter.ts";
 import { Either } from "./either.ts";
-import { KData, KRecord, KRecordList, KValue } from "./data.ts";
-import { KFields } from "./client.ts";
+import { KData, KFields, KRecord, KRecordList, KValue } from "./data.ts";
 
 export type KIOS<T extends string, A, D extends KData<A> = KData<A>> = {
   readonly [K in T]: D;
