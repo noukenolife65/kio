@@ -131,6 +131,20 @@ describe("InterpreterImpl", () => {
           .commit(interpreter);
         expect(result).toStrictEqual(new Right(expectedRecords));
       });
+      it("AddRecord", async () => {
+        const newText = `test_${new Date().toTimeString()}`;
+        const result = await KIO.succeed("succeed")(1)
+          .flatMap("addRecord")(() =>
+            KIO.addRecord("addRecord")({
+              app: 1,
+              record: {
+                text: { value: newText },
+              },
+            }),
+          )
+          .commit(interpreter);
+        expect(result).toStrictEqual(new Right({ text: { value: newText } }));
+      });
       it("UpdateRecord", async () => {
         const { record: savedRecord } = await kClient.record.getRecord<
           KVPairs<SavedFields>

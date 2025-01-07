@@ -16,17 +16,25 @@ export type GetRecordsParams = {
   totalCount?: boolean;
 };
 export type GetRecordsResponse<R extends KFields> = R[];
+export type AddRecordRequest = {
+  method: "POST";
+  api: "/k/v1/record.json";
+  payload: {
+    app: string | number;
+    record: KFields;
+  };
+};
 export type UpdateRecordRequest = {
   method: "PUT";
   api: "/k/v1/record.json";
   payload: {
     app: string | number;
     id: string | number;
-    record?: KFields;
+    record: KFields;
     revision?: string | number;
   };
 };
-export type BulkRequest = UpdateRecordRequest;
+export type BulkRequest = AddRecordRequest | UpdateRecordRequest;
 export type BulkRequestParams = {
   requests: BulkRequest[];
 };
