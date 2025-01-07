@@ -19,6 +19,20 @@ export class KValue<T> {
   }
 }
 
+export class KNewRecord<T> {
+  readonly kind: "KNewRecord" = "KNewRecord" as const;
+  readonly value: T;
+  readonly app: string | number;
+  constructor(value: T, app: string | number) {
+    this.value = value;
+    this.app = app;
+  }
+
+  update(f: (value: T) => T): KNewRecord<T> {
+    return new KNewRecord(f(this.value), this.app);
+  }
+}
+
 export class KRecord<T> {
   readonly kind: "KRecord" = "KRecord" as const;
   readonly value: T;
@@ -57,4 +71,4 @@ export class KRecordList<T> {
   }
 }
 
-export type KData<T> = KValue<T> | KRecord<T> | KRecordList<T>;
+export type KData<T> = KValue<T> | KRecord<T> | KNewRecord<T> | KRecordList<T>;

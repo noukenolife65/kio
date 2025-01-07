@@ -1,6 +1,11 @@
 import { KIOA } from "./kio.ts";
 import { Either, Left, Right } from "./either.ts";
-import { BulkRequest, KintoneClient, UpdateRecordRequest } from "./client.ts";
+import {
+  AddRecordRequest,
+  BulkRequest,
+  KintoneClient,
+  UpdateRecordRequest,
+} from "./client.ts";
 import {
   KIdField,
   KData,
@@ -112,6 +117,22 @@ export class InterpreterImpl implements Interpreter {
           bulkRequests,
           { ...state, [name]: kRecordList },
           kRecordList,
+        ] as [BulkRequest[], S, D]);
+      }
+      case "AddRecord": {
+        const { name, record } = kioa;
+        const addRecordRequest: AddRecordRequest = {
+          method: "POST",
+          api: "/k/v1/record.json",
+          payload: {
+            app: record.app,
+            record: record.value,
+          },
+        };
+        return new Right([
+          [...bulkRequests, addRecordRequest],
+          { ...state, [name]: record },
+          record,
         ] as [BulkRequest[], S, D]);
       }
       case "UpdateRecord": {

@@ -1,6 +1,13 @@
 import { Interpreter } from "./interpreter.ts";
 import { Either } from "./either.ts";
-import { KData, KFields, KRecord, KRecordList, KValue } from "./data.ts";
+import {
+  KData,
+  KFields,
+  KNewRecord,
+  KRecord,
+  KRecordList,
+  KValue,
+} from "./data.ts";
 
 export type KIOS<T extends string, A, D extends KData<A> = KData<A>> = {
   readonly [K in T]: D;
@@ -77,6 +84,22 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
       });
   }
 
+  static addRecord<N extends string>(
+    name: N,
+  ): <R extends KFields>(args: {
+    app: number | string;
+    record: R;
+  }) => KIO<object, never, R, KNewRecord<R>> {
+    return ({ app, record }) => {
+      const kRecord = new KNewRecord(record, app);
+      return new KIO({
+        kind: "AddRecord",
+        name,
+        record: kRecord,
+      });
+    };
+  }
+
   static updateRecord<N extends string>(
     name: N,
   ): <R extends KFields>(args: {
@@ -118,6 +141,11 @@ export type KIOA<E, A, D extends KData<A>> =
       app: number | string;
       fields?: string[];
       query?: string;
+    }
+  | {
+      kind: "AddRecord";
+      name: string;
+      record: KNewRecord<KFields>;
     }
   | {
       kind: "UpdateRecord";
