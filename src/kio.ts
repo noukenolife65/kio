@@ -4,6 +4,7 @@ import {
   KData,
   KFields,
   KNewRecord,
+  KNothing,
   KRecord,
   KRecordList,
   KValue,
@@ -89,7 +90,7 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
   ): <R extends KFields>(args: {
     app: number | string;
     record: R;
-  }) => KIO<object, never, R, KNewRecord<R>> {
+  }) => KIO<object, never, void, KNothing> {
     return ({ app, record }) => {
       const kRecord = new KNewRecord(record, app);
       return new KIO({
@@ -104,10 +105,23 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
     name: N,
   ): <R extends KFields>(args: {
     record: KRecord<R>;
-  }) => KIO<object, never, R, KRecord<R>> {
+  }) => KIO<object, never, void, KNothing> {
     return (args) =>
       new KIO({
         kind: "UpdateRecord",
+        name,
+        ...args,
+      });
+  }
+
+  static deleteRecord<N extends string>(
+    name: N,
+  ): <R extends KFields>(args: {
+    record: KRecord<R>;
+  }) => KIO<object, never, void, KNothing> {
+    return (args) =>
+      new KIO({
+        kind: "DeleteRecord",
         name,
         ...args,
       });
@@ -149,6 +163,11 @@ export type KIOA<E, A, D extends KData<A>> =
     }
   | {
       kind: "UpdateRecord";
+      name: string;
+      record: KRecord<KFields>;
+    }
+  | {
+      kind: "DeleteRecord";
       name: string;
       record: KRecord<KFields>;
     };

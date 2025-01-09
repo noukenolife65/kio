@@ -34,7 +34,19 @@ export type UpdateRecordRequest = {
     revision?: string | number;
   };
 };
-export type BulkRequest = AddRecordRequest | UpdateRecordRequest;
+export type DeleteRecordsRequest = {
+  method: "DELETE";
+  api: "/k/v1/records.json";
+  payload: {
+    app: string | number;
+    ids: (string | number)[];
+    revisions?: (string | number)[];
+  };
+};
+export type BulkRequest =
+  | AddRecordRequest
+  | UpdateRecordRequest
+  | DeleteRecordsRequest;
 export type BulkRequestParams = {
   requests: BulkRequest[];
 };
