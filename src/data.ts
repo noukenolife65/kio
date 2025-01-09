@@ -71,4 +71,14 @@ export class KRecordList<T> {
   }
 }
 
-export type KData<T> = KValue<T> | KRecord<T> | KNewRecord<T> | KRecordList<T>;
+export class KNothing {
+  readonly kind: "KNothing" = "KNothing";
+  readonly value = undefined;
+}
+
+export type KData<T> =
+  | KValue<T>
+  | KRecord<T>
+  | KNewRecord<T>
+  | KRecordList<T>
+  | KNothing;

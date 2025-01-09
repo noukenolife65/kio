@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { KIO } from "./kio.ts";
 import { InterpreterImpl } from "./interpreter.ts";
 import { Left, Right } from "./either.ts";
@@ -78,6 +78,7 @@ describe("InterpreterImpl", () => {
       });
     });
     describe("Kintone Operations", () => {
+      const app = 1;
       const kClient = new KintoneRestAPIClient({
         baseUrl: process.env.KINTONE_BASE_URL,
         auth: {
@@ -86,23 +87,49 @@ describe("InterpreterImpl", () => {
       });
       const client = new KintoneClientImpl(kClient);
       const interpreter = new InterpreterImpl(client);
+      const cleanUp = () => {
+        onTestFinished(async () => {
+          const records = await kClient.record.getAllRecords<{
+            $id: { type: "__ID__"; value: string };
+          }>({
+            app,
+            fields: ["$id"],
+          });
+          if (records.length > 0) {
+            await kClient.record.deleteRecords({
+              app,
+              ids: records.map(({ $id }) => $id.value),
+            });
+          }
+        });
+      };
       it("GetRecord", async () => {
+        cleanUp();
+        // Given
+        const record: KVPairs<Fields> = {
+          text: { value: `test_${new Date().toTimeString()}` },
+        };
+        const { id } = await kClient.record.addRecord({
+          app,
+          record,
+        });
         const { record: expectedRecord } = await kClient.record.getRecord<
           KVPairs<SavedFields>
         >({
-          app: 1,
-          id: 1,
+          app,
+          id,
         });
+        // When
         const result = await KIO.succeed("succeed")(1)
           .flatMap("record")(() =>
-            KIO.getRecord("record")<typeof expectedRecord>({ app: 1, id: 1 }),
+            KIO.getRecord("record")<typeof expectedRecord>({ app: 1, id }),
           )
           .map("map")((a, s) => {
             expect(s).toStrictEqual({
               succeed: new KValue(1),
               record: new KRecord(
                 expectedRecord,
-                1,
+                app,
                 expectedRecord.$id.value,
                 expectedRecord.$revision.value,
               ),
@@ -110,65 +137,145 @@ describe("InterpreterImpl", () => {
             return a;
           })
           .commit(interpreter);
+        // Then
         expect(result).toStrictEqual(new Right(expectedRecord));
       });
       it("GetRecords", async () => {
+        cleanUp();
+        // Given
+        const record: KVPairs<Fields> = {
+          text: { value: `test_${new Date().toTimeString()}` },
+        };
+        const { id } = await kClient.record.addRecord({
+          app,
+          record,
+        });
         const { records: expectedRecords } = await kClient.record.getRecords<
           Pick<KVPairs<SavedFields>, "text" | "$revision">
         >({
-          app: 1,
+          app,
           fields: ["text", "$revision", "$id"],
-          query: "$id = 1",
+          query: `$id = ${id}`,
         });
+        // When
         const result = await KIO.succeed("succeed")(1)
           .flatMap("records")(() =>
             KIO.getRecords("records")<ArrayElm<typeof expectedRecords>>({
-              app: 1,
+              app,
               fields: ["text"],
-              query: "$id = 1",
+              query: `$id = ${id}`,
             }),
           )
           .commit(interpreter);
+        // Then
         expect(result).toStrictEqual(new Right(expectedRecords));
       });
       it("AddRecord", async () => {
-        const newText = `test_${new Date().toTimeString()}`;
+        cleanUp();
+        // Given
+        const record: KVPairs<Fields> = {
+          text: { value: `test_${new Date().toTimeString()}` },
+        };
+        // When
         const result = await KIO.succeed("succeed")(1)
           .flatMap("addRecord")(() =>
             KIO.addRecord("addRecord")({
-              app: 1,
-              record: {
-                text: { value: newText },
-              },
+              app,
+              record,
             }),
           )
           .commit(interpreter);
-        expect(result).toStrictEqual(new Right({ text: { value: newText } }));
+        // Then
+        const savedRecords = await kClient.record.getAllRecords<
+          KVPairs<Fields>
+        >({ app });
+        expect(savedRecords.map((r) => r.text.value)).toStrictEqual([
+          record.text.value,
+        ]);
+        expect(result).toStrictEqual(new Right(undefined));
       });
       it("UpdateRecord", async () => {
-        const { record: savedRecord } = await kClient.record.getRecord<
-          KVPairs<SavedFields>
-        >({
-          app: 1,
-          id: 1,
+        cleanUp();
+        // Given
+        const record: KVPairs<Fields> = {
+          text: { value: `test_${new Date().toTimeString()}` },
+        };
+        await kClient.record.addRecord({
+          app,
+          record,
         });
-        const newText = `test_${new Date().toTimeString()}`;
+        const {
+          records: [savedRecord],
+        } = await kClient.record.getRecords<KVPairs<SavedFields>>({
+          app,
+        });
+        // When
         const result = await KIO.succeed("succeed")(1)
           .flatMap("getRecord")(() =>
-            KIO.getRecord("getRecord")<KVPairs<Fields>>({ app: 1, id: 1 }),
+            KIO.getRecord("getRecord")<KVPairs<Fields>>({
+              app,
+              id: savedRecord.$id.value,
+            }),
           )
           .flatMap("updateRecord")((a) =>
             KIO.updateRecord("updateRecord")({
               record: a.update((value) => ({
                 ...value,
-                text: { value: newText },
+                text: { value: "updated" },
               })),
             }),
           )
           .commit(interpreter);
-        expect(result).toStrictEqual(
-          new Right({ ...savedRecord, text: { value: newText } }),
-        );
+        // Then
+        const { record: updatedRecord } = await kClient.record.getRecord({
+          app,
+          id: savedRecord.$id.value,
+        });
+        const expectedRecord = {
+          ...savedRecord,
+          text: { ...savedRecord.text, value: "updated" },
+          $revision: { ...savedRecord.$revision, value: "2" },
+        };
+        expect(updatedRecord).toStrictEqual(expectedRecord);
+        expect(result).toStrictEqual(new Right(undefined));
+      });
+      it("DeleteRecord", async () => {
+        cleanUp();
+        // Given
+        const record: KVPairs<Fields> = {
+          text: { value: `test_${new Date().toTimeString()}` },
+        };
+        await kClient.record.addRecord({
+          app,
+          record,
+        });
+        const {
+          records: [savedRecord],
+        } = await kClient.record.getRecords<KVPairs<SavedFields>>({
+          app,
+        });
+        // When
+        const result = await KIO.succeed("succeed")(1)
+          .flatMap("getRecord")(() =>
+            KIO.getRecord("getRecord")<KVPairs<Fields>>({
+              app,
+              id: savedRecord.$id.value,
+            }),
+          )
+          .flatMap("deleteRecord")((record) =>
+            KIO.deleteRecord("deleteRecord")({
+              record,
+            }),
+          )
+          .commit(interpreter);
+        // Then
+        const { records: noRecords } = await kClient.record.getRecords<
+          KVPairs<SavedFields>
+        >({
+          app,
+        });
+        expect(noRecords).toStrictEqual([]);
+        expect(result).toStrictEqual(new Right(undefined));
       });
     });
   });

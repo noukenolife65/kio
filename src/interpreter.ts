@@ -3,12 +3,14 @@ import { Either, Left, Right } from "./either.ts";
 import {
   AddRecordRequest,
   BulkRequest,
+  DeleteRecordsRequest,
   KintoneClient,
   UpdateRecordRequest,
 } from "./client.ts";
 import {
-  KIdField,
   KData,
+  KIdField,
+  KNothing,
   KRecord,
   KRecordList,
   KRevisionField,
@@ -131,8 +133,8 @@ export class InterpreterImpl implements Interpreter {
         };
         return new Right([
           [...bulkRequests, addRecordRequest],
-          { ...state, [name]: record },
-          record,
+          { ...state, [name]: undefined },
+          new KNothing(),
         ] as [BulkRequest[], S, D]);
       }
       case "UpdateRecord": {
@@ -163,8 +165,25 @@ export class InterpreterImpl implements Interpreter {
         };
         return new Right([
           [...bulkRequests, updateRecordRequest],
-          { ...state, [name]: record },
-          record,
+          { ...state, [name]: undefined },
+          new KNothing(),
+        ] as [BulkRequest[], S, D]);
+      }
+      case "DeleteRecord": {
+        const { name, record } = kioa;
+        const deleteRecordRequest: DeleteRecordsRequest = {
+          method: "DELETE",
+          api: "/k/v1/records.json",
+          payload: {
+            app: record.app,
+            ids: [record.id],
+            revisions: [record.revision ?? -1],
+          },
+        };
+        return new Right([
+          [...bulkRequests, deleteRecordRequest],
+          { ...state, [name]: undefined },
+          new KNothing(),
         ] as [BulkRequest[], S, D]);
       }
     }
