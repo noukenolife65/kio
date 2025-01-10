@@ -49,7 +49,7 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
     name: N,
   ): <B, D1 extends KData<B>>(
     f: (a: D, s: S) => D1,
-  ) => KIO<S & KIOS<N, B, D1>, E, B, D1> {
+  ) => KIO<S & KIOS<N, D1["value"], D1>, E, D1["value"], D1> {
     return (f) =>
       this.flatMap(name)((a, s) => {
         return new KIO({ kind: "Succeed", name, value: f(a, s) });
