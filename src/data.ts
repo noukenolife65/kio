@@ -73,7 +73,7 @@ export class KRecordList<T> {
 
 export class KNothing {
   readonly kind: "KNothing" = "KNothing";
-  readonly value = undefined;
+  readonly value: void = undefined;
 }
 
 export type KData<T> =
