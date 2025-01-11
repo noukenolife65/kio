@@ -134,10 +134,13 @@ describe("InterpreterImpl", () => {
           id,
         });
         // When
-        const result = await KIO.succeed(1)
-          .flatMap("record", () =>
-            KIO.getRecord("record")<typeof expectedRecord>({ app: 1, id }),
-          )
+        const result = await KIO.getRecord<"record", typeof expectedRecord>(
+          "record",
+          {
+            app: 1,
+            id,
+          },
+        )
           .map((a, s) => {
             expect(s).toStrictEqual({
               record: new KRecord(
@@ -225,7 +228,7 @@ describe("InterpreterImpl", () => {
         // When
         const result = await KIO.succeed(1)
           .flatMap("getRecord", () =>
-            KIO.getRecord("getRecord")<KVPairs<Fields>>({
+            KIO.getRecord<KVPairs<Fields>>({
               app,
               id: savedRecord.$id.value,
             }),
@@ -270,7 +273,7 @@ describe("InterpreterImpl", () => {
         // When
         const result = await KIO.succeed(1)
           .flatMap("getRecord", () =>
-            KIO.getRecord("getRecord")<KVPairs<Fields>>({
+            KIO.getRecord<KVPairs<Fields>>({
               app,
               id: savedRecord.$id.value,
             }),

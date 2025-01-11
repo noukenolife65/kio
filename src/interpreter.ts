@@ -92,7 +92,7 @@ export class InterpreterImpl implements Interpreter {
         const kRecord = new KRecord(record, kioa.app, id, revision);
         return new Right([
           bulkRequests,
-          { ...state, [kioa.name]: kRecord },
+          kioa.name ? { ...state, [kioa.name]: kRecord } : state,
           kRecord,
         ] as [BulkRequest[], S, D]);
       }
