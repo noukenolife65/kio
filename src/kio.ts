@@ -74,15 +74,30 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
     }
   }
 
-  map<N extends string>(
-    name: N,
-  ): <B, D1 extends KData<B>>(
+  map<B, D1 extends KData<B>>(
     f: (a: D, s: S) => D1,
-  ) => KIO<S & KIOS<N, D1["value"], D1>, E, D1["value"], D1> {
-    return (f) =>
-      this.flatMap(name, (a, s) => {
-        return new KIO({ kind: "Succeed", name, value: f(a, s) });
+  ): KIO<S, E, D1["value"], D1>;
+  map<N extends string, B, D1 extends KData<B>>(
+    name: N,
+    f: (a: D, s: S) => D1,
+  ): KIO<S & KIOS<N, D1["value"], D1>, E, D1["value"], D1>;
+  map<N extends string, B, D1 extends KData<B>>(
+    nameOrF: N | ((a: D, s: S) => D1),
+    f?: (a: D, s: S) => D1,
+  ):
+    | KIO<S, E, D1["value"], D1>
+    | KIO<S & KIOS<N, D1["value"], D1>, E, D1["value"], D1> {
+    if (arguments.length === 1 && typeof nameOrF === "function") {
+      return this.flatMap((a, s) => {
+        return new KIO({ kind: "Succeed", value: nameOrF(a, s) });
       });
+    } else if (arguments.length === 2 && typeof nameOrF === "string") {
+      return this.flatMap(nameOrF, (a, s) => {
+        return new KIO({ kind: "Succeed", name: nameOrF, value: f!(a, s) });
+      });
+    } else {
+      throw new Error("Invalid arguments");
+    }
   }
 
   static getRecord<N extends string>(
