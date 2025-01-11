@@ -45,7 +45,7 @@ describe("InterpreterImpl", () => {
       describe("Succeed", () => {
         it("with state", async () => {
           const result = await KIO.succeed("succeed", 1)
-            .map("map")((a, s) => {
+            .map((a, s) => {
               expect(s).toStrictEqual({ succeed: new KValue(1) });
               return a;
             })
@@ -54,7 +54,7 @@ describe("InterpreterImpl", () => {
         });
         it("without state", async () => {
           const result = await KIO.succeed(1)
-            .map("map")((a, s) => {
+            .map((a, s) => {
               expect(s).toStrictEqual({});
               return a;
             })
@@ -64,7 +64,7 @@ describe("InterpreterImpl", () => {
       });
       it("Fail", async () => {
         const result = await KIO.fail("error")
-          .map("map")(() => expect.fail())
+          .map(() => expect.fail())
           .commit(interpreter);
         expect(result).toStrictEqual(new Left("error"));
       });
@@ -72,12 +72,17 @@ describe("InterpreterImpl", () => {
         const success = await KIO.succeed(1)
           .flatMap((a) => KIO.succeed(a.value + 1))
           .flatMap("flatMap", (a) => KIO.succeed(a.value + 1))
-          .map("map")((a, s) => {
-            expect(s).toStrictEqual({ flatMap: new KValue(3) });
+          .map((a) => a.update((value) => value + 1))
+          .map("map", (a) => a.update((value) => value + 1))
+          .map((a, s) => {
+            expect(s).toStrictEqual({
+              flatMap: new KValue(3),
+              map: new KValue(5),
+            });
             return a;
           })
           .commit(interpreter);
-        expect(success).toStrictEqual(new Right(3));
+        expect(success).toStrictEqual(new Right(5));
 
         const failure = await KIO.succeed(1)
           .flatMap(() => KIO.fail("error"))
@@ -133,7 +138,7 @@ describe("InterpreterImpl", () => {
           .flatMap("record", () =>
             KIO.getRecord("record")<typeof expectedRecord>({ app: 1, id }),
           )
-          .map("map")((a, s) => {
+          .map((a, s) => {
             expect(s).toStrictEqual({
               record: new KRecord(
                 expectedRecord,
