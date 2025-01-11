@@ -21,10 +21,24 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
     this.kioa = kioa;
   }
 
-  static succeed<N extends string>(
+  static succeed<A>(a: A): KIO<object, never, A, KValue<A>>;
+  static succeed<N extends string, A>(
     name: N,
-  ): <A>(a: A) => KIO<KIOS<N, A, KValue<A>>, never, A, KValue<A>> {
-    return (a) => new KIO({ name, kind: "Succeed", value: new KValue(a) });
+    a: A,
+  ): KIO<KIOS<N, A, KValue<A>>, never, A, KValue<A>>;
+  static succeed<N extends string, A>(
+    nameOrA: N | A,
+    a?: A,
+  ):
+    | KIO<object, never, A, KValue<A>>
+    | KIO<KIOS<N, A, KValue<A>>, never, A, KValue<A>> {
+    if (arguments.length === 1) {
+      return new KIO({ kind: "Succeed", value: new KValue(nameOrA as A) });
+    } else if (arguments.length === 2 && typeof nameOrA === "string") {
+      return new KIO({ name: nameOrA, kind: "Succeed", value: new KValue(a!) });
+    } else {
+      throw new Error("Invalid arguments");
+    }
   }
 
   static fail<E>(e: E): KIO<object, E, never, never> {
@@ -141,7 +155,7 @@ export type KIOA<E, A, D extends KData<A>> =
       self: KIOA<unknown, unknown, KData<unknown>>;
       f: (a: unknown, s: unknown) => KIOA<E, A, D>;
     }
-  | { kind: "Succeed"; name: string; value: D }
+  | { kind: "Succeed"; name?: string; value: D }
   | { kind: "Fail"; error: E }
   | {
       kind: "GetRecord";
