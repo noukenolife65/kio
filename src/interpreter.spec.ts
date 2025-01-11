@@ -64,23 +64,24 @@ describe("InterpreterImpl", () => {
       });
       it("Fail", async () => {
         const result = await KIO.fail("error")
-          .map("map")(() => {
-            expect.fail();
-          })
+          .map("map")(() => expect.fail())
           .commit(interpreter);
         expect(result).toStrictEqual(new Left("error"));
       });
       it("FlatMap", async () => {
         const success = await KIO.succeed(1)
-          .flatMap("flatMap")((a) => {
-            return KIO.succeed(a.value + 1);
+          .flatMap((a) => KIO.succeed(a.value + 1))
+          .flatMap("flatMap", (a) => KIO.succeed(a.value + 1))
+          .map("map")((a, s) => {
+            expect(s).toStrictEqual({ flatMap: new KValue(3) });
+            return a;
           })
           .commit(interpreter);
-        expect(success).toStrictEqual(new Right(2));
+        expect(success).toStrictEqual(new Right(3));
 
         const failure = await KIO.succeed(1)
-          .flatMap("flatMap1")(() => KIO.fail("error"))
-          .flatMap("flatMap2")(() => KIO.succeed(1))
+          .flatMap(() => KIO.fail("error"))
+          .flatMap(() => KIO.succeed(1))
           .commit(interpreter);
         expect(failure).toStrictEqual(new Left("error"));
       });
@@ -129,7 +130,7 @@ describe("InterpreterImpl", () => {
         });
         // When
         const result = await KIO.succeed(1)
-          .flatMap("record")(() =>
+          .flatMap("record", () =>
             KIO.getRecord("record")<typeof expectedRecord>({ app: 1, id }),
           )
           .map("map")((a, s) => {
@@ -166,7 +167,7 @@ describe("InterpreterImpl", () => {
         });
         // When
         const result = await KIO.succeed(1)
-          .flatMap("records")(() =>
+          .flatMap("records", () =>
             KIO.getRecords("records")<ArrayElm<typeof expectedRecords>>({
               app,
               fields: ["text"],
@@ -185,7 +186,7 @@ describe("InterpreterImpl", () => {
         };
         // When
         const result = await KIO.succeed(1)
-          .flatMap("addRecord")(() =>
+          .flatMap("addRecord", () =>
             KIO.addRecord("addRecord")({
               app,
               record,
@@ -218,13 +219,13 @@ describe("InterpreterImpl", () => {
         });
         // When
         const result = await KIO.succeed(1)
-          .flatMap("getRecord")(() =>
+          .flatMap("getRecord", () =>
             KIO.getRecord("getRecord")<KVPairs<Fields>>({
               app,
               id: savedRecord.$id.value,
             }),
           )
-          .flatMap("updateRecord")((a) =>
+          .flatMap("updateRecord", (a) =>
             KIO.updateRecord("updateRecord")({
               record: a.update((value) => ({
                 ...value,
@@ -263,13 +264,13 @@ describe("InterpreterImpl", () => {
         });
         // When
         const result = await KIO.succeed(1)
-          .flatMap("getRecord")(() =>
+          .flatMap("getRecord", () =>
             KIO.getRecord("getRecord")<KVPairs<Fields>>({
               app,
               id: savedRecord.$id.value,
             }),
           )
-          .flatMap("deleteRecord")((record) =>
+          .flatMap("deleteRecord", (record) =>
             KIO.deleteRecord("deleteRecord")({
               record,
             }),

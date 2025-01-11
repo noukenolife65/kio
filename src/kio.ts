@@ -45,18 +45,33 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
     return new KIO({ kind: "Fail", error: e });
   }
 
-  flatMap<N extends string>(
-    name: N,
-  ): <S1 extends object, E1, B, D1 extends KData<B>>(
+  flatMap<S1 extends object, E1, B, D1 extends KData<B>>(
     f: (a: D, s: S) => KIO<S1, E1, B, D1>,
-  ) => KIO<S & KIOS<N, B, D1>, E | E1, B, D1> {
-    return (f) =>
-      new KIO({
+  ): KIO<S, E | E1, B, D1>;
+  flatMap<N extends string, S1 extends object, E1, B, D1 extends KData<B>>(
+    name: N,
+    f: (a: D, s: S) => KIO<S1, E1, B, D1>,
+  ): KIO<S & KIOS<N, B, D1>, E | E1, B, D1>;
+  flatMap<N extends string, S1 extends object, E1, B, D1 extends KData<B>>(
+    nameOrF: N | ((a: D, s: S) => KIO<S1, E1, B, D1>),
+    f?: (a: D, s: S) => KIO<S1, E1, B, D1>,
+  ): KIO<S, E | E1, B, D1> | KIO<S & KIOS<N, B, D1>, E | E1, B, D1> {
+    if (arguments.length === 1 && typeof nameOrF === "function") {
+      return new KIO({
         kind: "FlatMap",
-        name,
         self: this.kioa,
-        f: (a, s) => f(a as D, s as S).kioa,
+        f: (a, s) => nameOrF(a as D, s as S).kioa,
       });
+    } else if (arguments.length === 2 && typeof nameOrF === "string") {
+      return new KIO({
+        kind: "FlatMap",
+        name: nameOrF,
+        self: this.kioa,
+        f: (a, s) => f!(a as D, s as S).kioa,
+      });
+    } else {
+      throw new Error("Invalid arguments");
+    }
   }
 
   map<N extends string>(
@@ -65,7 +80,7 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
     f: (a: D, s: S) => D1,
   ) => KIO<S & KIOS<N, D1["value"], D1>, E, D1["value"], D1> {
     return (f) =>
-      this.flatMap(name)((a, s) => {
+      this.flatMap(name, (a, s) => {
         return new KIO({ kind: "Succeed", name, value: f(a, s) });
       });
   }
@@ -151,7 +166,7 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
 export type KIOA<E, A, D extends KData<A>> =
   | {
       kind: "FlatMap";
-      name: string;
+      name?: string;
       self: KIOA<unknown, unknown, KData<unknown>>;
       f: (a: unknown, s: unknown) => KIOA<E, A, D>;
     }

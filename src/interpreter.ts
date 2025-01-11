@@ -69,7 +69,7 @@ export class InterpreterImpl implements Interpreter {
                     return r2;
                   case "Right": {
                     const [bulkRequests2, , a2] = r2.value;
-                    const s2 = { ...s1, [kioa.name]: a2 };
+                    const s2 = kioa.name ? { ...s1, [kioa.name]: a2 } : s1;
                     return new Right([
                       [...bulkRequests1, ...bulkRequests2],
                       s2,
