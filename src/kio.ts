@@ -14,6 +14,11 @@ export type KIOS<T extends string, A, D extends KData<A> = KData<A>> = {
   readonly [K in T]: D;
 };
 
+type GetRecordArgs = {
+  app: number | string;
+  id: number | string;
+};
+
 export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
   private kioa: KIOA<E, A, D>;
 
@@ -100,18 +105,33 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
     }
   }
 
-  static getRecord<N extends string>(
+  static getRecord<R extends KFields>(
+    args: GetRecordArgs,
+  ): KIO<object, never, R, KRecord<R>>;
+  static getRecord<N extends string, R extends KFields>(
     name: N,
-  ): <R extends KFields>(args: {
-    app: number | string;
-    id: number | string;
-  }) => KIO<object, never, R, KRecord<R>> {
-    return (args) =>
-      new KIO({
+    args: GetRecordArgs,
+  ): KIO<KIOS<N, R, KRecord<R>>, never, R, KRecord<R>>;
+  static getRecord<N extends string, R extends KFields>(
+    nameOrArgs: N | GetRecordArgs,
+    args?: GetRecordArgs,
+  ):
+    | KIO<object, never, R, KRecord<R>>
+    | KIO<KIOS<N, R, KRecord<R>>, never, R, KRecord<R>> {
+    if (arguments.length === 1 && typeof nameOrArgs === "object") {
+      return new KIO({
         kind: "GetRecord",
-        name,
-        ...args,
+        ...nameOrArgs,
       });
+    } else if (arguments.length === 2 && typeof nameOrArgs === "string") {
+      return new KIO({
+        kind: "GetRecord",
+        name: nameOrArgs,
+        ...args!,
+      });
+    } else {
+      throw new Error("Invalid arguments");
+    }
   }
 
   static getRecords<N extends string>(
@@ -189,7 +209,7 @@ export type KIOA<E, A, D extends KData<A>> =
   | { kind: "Fail"; error: E }
   | {
       kind: "GetRecord";
-      name: string;
+      name?: string;
       app: number | string;
       id: number | string;
     }
