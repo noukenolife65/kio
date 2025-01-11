@@ -72,7 +72,7 @@ export class KRecordList<T> {
 }
 
 export class KNothing {
-  readonly kind: "KNothing" = "KNothing";
+  readonly kind: "KNothing" = "KNothing" as const;
   readonly value: void = undefined;
 }
 
