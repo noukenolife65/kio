@@ -36,7 +36,9 @@ export class InterpreterImpl implements Interpreter {
   ): Promise<Either<E, [BulkRequest[], S, D]>> {
     switch (kioa.kind) {
       case "Succeed": {
-        const newState = { ...state, [kioa.name]: kioa.value };
+        const newState = kioa.name
+          ? { ...state, [kioa.name]: kioa.value }
+          : state;
         return Promise.resolve(
           new Right([bulkRequests, newState, kioa.value] as [
             BulkRequest[],
