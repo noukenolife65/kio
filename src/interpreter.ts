@@ -124,7 +124,7 @@ export class InterpreterImpl implements Interpreter {
         ] as [BulkRequest[], S, D]);
       }
       case "AddRecord": {
-        const { name, record } = kioa;
+        const { record } = kioa;
         const addRecordRequest: AddRecordRequest = {
           method: "POST",
           api: "/k/v1/record.json",
@@ -135,7 +135,7 @@ export class InterpreterImpl implements Interpreter {
         };
         return new Right([
           [...bulkRequests, addRecordRequest],
-          { ...state, [name]: undefined },
+          state,
           new KNothing(),
         ] as [BulkRequest[], S, D]);
       }

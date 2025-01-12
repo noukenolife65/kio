@@ -168,20 +168,16 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
     }
   }
 
-  static addRecord<N extends string>(
-    name: N,
-  ): <R extends KFields>(args: {
+  static addRecord<R extends KFields>(args: {
     app: number | string;
     record: R;
-  }) => KIO<object, never, void, KNothing> {
-    return ({ app, record }) => {
-      const kRecord = new KNewRecord(record, app);
-      return new KIO({
-        kind: "AddRecord",
-        name,
-        record: kRecord,
-      });
-    };
+  }): KIO<object, never, void, KNothing> {
+    const { app, record } = args;
+    const kRecord = new KNewRecord(record, app);
+    return new KIO({
+      kind: "AddRecord",
+      record: kRecord,
+    });
   }
 
   static updateRecord<N extends string>(
@@ -241,7 +237,6 @@ export type KIOA<E, A, D extends KData<A>> =
     }
   | {
       kind: "AddRecord";
-      name: string;
       record: KNewRecord<KFields>;
     }
   | {

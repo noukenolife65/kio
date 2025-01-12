@@ -211,7 +211,7 @@ describe("InterpreterImpl", () => {
         // When
         const result = await KIO.succeed(1)
           .flatMap("addRecord", () =>
-            KIO.addRecord("addRecord")({
+            KIO.addRecord({
               app,
               record,
             }),
