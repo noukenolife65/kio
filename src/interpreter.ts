@@ -119,7 +119,7 @@ export class InterpreterImpl implements Interpreter {
         );
         return new Right([
           bulkRequests,
-          { ...state, [name]: kRecordList },
+          name ? { ...state, [name]: kRecordList } : state,
           kRecordList,
         ] as [BulkRequest[], S, D]);
       }
