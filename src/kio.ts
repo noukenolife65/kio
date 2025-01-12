@@ -180,17 +180,13 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
     });
   }
 
-  static updateRecord<N extends string>(
-    name: N,
-  ): <R extends KFields>(args: {
+  static updateRecord<R extends KFields>(args: {
     record: KRecord<R>;
-  }) => KIO<object, never, void, KNothing> {
-    return (args) =>
-      new KIO({
-        kind: "UpdateRecord",
-        name,
-        ...args,
-      });
+  }): KIO<object, never, void, KNothing> {
+    return new KIO({
+      kind: "UpdateRecord",
+      ...args,
+    });
   }
 
   static deleteRecord<N extends string>(
@@ -241,7 +237,6 @@ export type KIOA<E, A, D extends KData<A>> =
     }
   | {
       kind: "UpdateRecord";
-      name: string;
       record: KRecord<KFields>;
     }
   | {
