@@ -172,7 +172,7 @@ export class InterpreterImpl implements Interpreter {
         ] as [BulkRequest[], S, D]);
       }
       case "DeleteRecord": {
-        const { name, record } = kioa;
+        const { record } = kioa;
         const deleteRecordRequest: DeleteRecordsRequest = {
           method: "DELETE",
           api: "/k/v1/records.json",
@@ -184,7 +184,7 @@ export class InterpreterImpl implements Interpreter {
         };
         return new Right([
           [...bulkRequests, deleteRecordRequest],
-          { ...state, [name]: undefined },
+          state,
           new KNothing(),
         ] as [BulkRequest[], S, D]);
       }

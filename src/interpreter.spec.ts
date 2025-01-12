@@ -295,7 +295,7 @@ describe("InterpreterImpl", () => {
             }),
           )
           .flatMap("deleteRecord", (record) =>
-            KIO.deleteRecord("deleteRecord")({
+            KIO.deleteRecord({
               record,
             }),
           )
