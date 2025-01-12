@@ -250,7 +250,7 @@ describe("InterpreterImpl", () => {
             }),
           )
           .flatMap("updateRecord", (a) =>
-            KIO.updateRecord("updateRecord")({
+            KIO.updateRecord({
               record: a.update((value) => ({
                 ...value,
                 text: { value: "updated" },

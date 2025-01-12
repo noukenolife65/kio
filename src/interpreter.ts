@@ -140,7 +140,7 @@ export class InterpreterImpl implements Interpreter {
         ] as [BulkRequest[], S, D]);
       }
       case "UpdateRecord": {
-        const { name, record } = kioa;
+        const { record } = kioa;
         const updatingRecord = Object.fromEntries(
           Object.entries(record.value).filter(([, { type }]) => {
             return (
@@ -167,7 +167,7 @@ export class InterpreterImpl implements Interpreter {
         };
         return new Right([
           [...bulkRequests, updateRecordRequest],
-          { ...state, [name]: undefined },
+          state,
           new KNothing(),
         ] as [BulkRequest[], S, D]);
       }
