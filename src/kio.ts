@@ -189,17 +189,13 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
     });
   }
 
-  static deleteRecord<N extends string>(
-    name: N,
-  ): <R extends KFields>(args: {
+  static deleteRecord<R extends KFields>(args: {
     record: KRecord<R>;
-  }) => KIO<object, never, void, KNothing> {
-    return (args) =>
-      new KIO({
-        kind: "DeleteRecord",
-        name,
-        ...args,
-      });
+  }): KIO<object, never, void, KNothing> {
+    return new KIO({
+      kind: "DeleteRecord",
+      ...args,
+    });
   }
 
   async commit(
@@ -241,6 +237,5 @@ export type KIOA<E, A, D extends KData<A>> =
     }
   | {
       kind: "DeleteRecord";
-      name: string;
       record: KRecord<KFields>;
     };
