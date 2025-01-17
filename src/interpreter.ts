@@ -83,18 +83,28 @@ export class InterpreterImpl implements Interpreter {
         })();
       }
       case "GetRecord": {
-        const { record } = await this.client.getRecord({
+        const response = await this.client.getRecord({
           app: kioa.app,
           id: kioa.id,
         });
-        const revision = record.$revision.value;
-        const id = record.$id.value;
-        const kRecord = new KRecord(record, kioa.app, id, revision);
-        return new Right([
-          bulkRequests,
-          kioa.name ? { ...state, [kioa.name]: kRecord } : state,
-          kRecord,
-        ] as [BulkRequest[], S, D]);
+        return (() => {
+          switch (response.kind) {
+            case "Left": {
+              return response as Left<E>;
+            }
+            case "Right": {
+              const { record } = response.value;
+              const revision = record.$revision.value;
+              const id = record.$id.value;
+              const kRecord = new KRecord(record, kioa.app, id, revision);
+              return new Right([
+                bulkRequests,
+                kioa.name ? { ...state, [kioa.name]: kRecord } : state,
+                kRecord,
+              ] as [BulkRequest[], S, D]);
+            }
+          }
+        })();
       }
       case "GetRecords": {
         const { name, app, fields: orgFields, query } = kioa;

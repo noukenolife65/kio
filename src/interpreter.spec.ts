@@ -1,7 +1,7 @@
 import { describe, expect, it, onTestFinished } from "vitest";
 import { KIO } from "./kio.ts";
 import { InterpreterImpl } from "./interpreter.ts";
-import { Left, Right } from "./either.ts";
+import { Either, Left, Right } from "./either.ts";
 import {
   BulkRequestResponse,
   GetRecordResponse,
@@ -9,7 +9,7 @@ import {
   KintoneClient,
   KintoneClientImpl,
 } from "./client.ts";
-import { KFields, KRecord, KRecordList, KValue } from "./data.ts";
+import { KError, KFields, KRecord, KRecordList, KValue } from "./data.ts";
 import { KintoneRestAPIClient } from "@kintone/rest-api-client";
 import { ArrayElm, KVPairs } from "./helper.ts";
 import SavedFields = kintone.types.SavedFields;
@@ -19,14 +19,14 @@ describe("InterpreterImpl", () => {
   describe("interpret", () => {
     describe("Basic Operations", () => {
       class FakeKintoneClient implements KintoneClient {
-        async getRecord(): Promise<GetRecordResponse> {
-          return {
+        async getRecord(): Promise<Either<KError, GetRecordResponse>> {
+          return new Right({
             record: {
               test: { value: 1 },
               $id: { value: 1 },
               $revision: { value: 2 },
             },
-          };
+          });
         }
         async getRecords<R extends KFields>(): Promise<GetRecordsResponse<R>> {
           return [
@@ -117,44 +117,57 @@ describe("InterpreterImpl", () => {
           }
         });
       };
-      it("GetRecord", async () => {
-        cleanUp();
-        // Given
-        const record: KVPairs<Fields> = {
-          text: { value: `test_${new Date().toTimeString()}` },
-        };
-        const { id } = await kClient.record.addRecord({
-          app,
-          record,
-        });
-        const { record: expectedRecord } = await kClient.record.getRecord<
-          KVPairs<SavedFields>
-        >({
-          app,
-          id,
-        });
-        // When
-        const result = await KIO.getRecord<"record", typeof expectedRecord>(
-          "record",
-          {
-            app: 1,
+      describe("GetRecord", () => {
+        it("should get a record", async () => {
+          cleanUp();
+          // Given
+          const record: KVPairs<Fields> = {
+            text: { value: `test_${new Date().toTimeString()}` },
+          };
+          const { id } = await kClient.record.addRecord({
+            app,
+            record,
+          });
+          const { record: expectedRecord } = await kClient.record.getRecord<
+            KVPairs<SavedFields>
+          >({
+            app,
             id,
-          },
-        )
-          .map((a, s) => {
-            expect(s).toStrictEqual({
-              record: new KRecord(
-                expectedRecord,
-                app,
-                expectedRecord.$id.value,
-                expectedRecord.$revision.value,
-              ),
-            });
-            return a;
-          })
-          .commit(interpreter);
-        // Then
-        expect(result).toStrictEqual(new Right(expectedRecord));
+          });
+          // When
+          const result = await KIO.getRecord<"record", typeof expectedRecord>(
+            "record",
+            { app, id },
+          )
+            .map((a, s) => {
+              expect(s).toStrictEqual({
+                record: new KRecord(
+                  expectedRecord,
+                  app,
+                  expectedRecord.$id.value,
+                  expectedRecord.$revision.value,
+                ),
+              });
+              return a;
+            })
+            .commit(interpreter);
+          // Then
+          expect(result).toStrictEqual(new Right(expectedRecord));
+        });
+        it("should fail to get a record", async () => {
+          cleanUp();
+          const result = await KIO.getRecord("record", {
+            app,
+            id: 9999,
+          }).commit(interpreter);
+          expect(result).toStrictEqual(
+            new Left({
+              id: expect.anything(),
+              code: expect.anything(),
+              message: expect.anything(),
+            }),
+          );
+        });
       });
       it("GetRecords", async () => {
         cleanUp();

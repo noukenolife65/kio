@@ -82,3 +82,9 @@ export type KData<T> =
   | KNewRecord<T>
   | KRecordList<T>
   | KNothing;
+
+export type KError = {
+  id: string;
+  code: string;
+  message: string;
+};

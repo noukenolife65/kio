@@ -1,5 +1,9 @@
-import { KintoneRestAPIClient } from "@kintone/rest-api-client";
-import { KIdField, KFields, KRevisionField } from "./data.ts";
+import {
+  KintoneRestAPIClient,
+  KintoneRestAPIError,
+} from "@kintone/rest-api-client";
+import { KError, KFields, KIdField, KRevisionField } from "./data.ts";
+import { Either, Left, Right } from "./either.ts";
 
 export type GetRecordParams = {
   app: string | number;
@@ -53,7 +57,9 @@ export type BulkRequestParams = {
 export type BulkRequestResponse = void;
 
 export interface KintoneClient {
-  getRecord(params: GetRecordParams): Promise<GetRecordResponse>;
+  getRecord(
+    params: GetRecordParams,
+  ): Promise<Either<KError, GetRecordResponse>>;
   getRecords<R extends KFields>(
     params: GetRecordsParams,
   ): Promise<GetRecordsResponse<R>>;
@@ -69,9 +75,21 @@ export class KintoneClientImpl implements KintoneClient {
 
   async getRecord<T extends GetRecordResponseRecord>(
     params: GetRecordParams,
-  ): Promise<GetRecordResponse> {
-    const result = await this.client.record.getRecord(params);
-    return result as unknown as { record: T };
+  ): Promise<Either<KError, GetRecordResponse>> {
+    try {
+      const result = await this.client.record.getRecord(params);
+      return new Right(result as unknown as { record: T });
+    } catch (e) {
+      if (e instanceof KintoneRestAPIError) {
+        return new Left({
+          id: e.id,
+          code: e.code,
+          message: e.message,
+        });
+      } else {
+        throw e;
+      }
+    }
   }
 
   async getRecords<R extends KFields>(

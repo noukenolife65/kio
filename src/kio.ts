@@ -2,6 +2,7 @@ import { Interpreter } from "./interpreter.ts";
 import { Either } from "./either.ts";
 import {
   KData,
+  KError,
   KFields,
   KNewRecord,
   KNothing,
@@ -112,17 +113,17 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
 
   static getRecord<R extends KFields>(
     args: GetRecordArgs,
-  ): KIO<object, never, R, KRecord<R>>;
+  ): KIO<object, KError, R, KRecord<R>>;
   static getRecord<N extends string, R extends KFields>(
     name: N,
     args: GetRecordArgs,
-  ): KIO<KIOS<N, R, KRecord<R>>, never, R, KRecord<R>>;
+  ): KIO<KIOS<N, R, KRecord<R>>, KError, R, KRecord<R>>;
   static getRecord<N extends string, R extends KFields>(
     nameOrArgs: N | GetRecordArgs,
     args?: GetRecordArgs,
   ):
-    | KIO<object, never, R, KRecord<R>>
-    | KIO<KIOS<N, R, KRecord<R>>, never, R, KRecord<R>> {
+    | KIO<object, KError, R, KRecord<R>>
+    | KIO<KIOS<N, R, KRecord<R>>, KError, R, KRecord<R>> {
     if (arguments.length === 1 && typeof nameOrArgs === "object") {
       return new KIO({
         kind: "GetRecord",
