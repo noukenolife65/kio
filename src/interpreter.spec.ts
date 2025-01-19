@@ -28,13 +28,15 @@ describe("InterpreterImpl", () => {
             },
           });
         }
-        async getRecords<R extends KFields>(): Promise<GetRecordsResponse<R>> {
-          return [
+        async getRecords<R extends KFields>(): Promise<
+          Either<KError, GetRecordsResponse<R>>
+        > {
+          return new Right([
             {
               test: { value: 1 },
               $revision: { value: 2 },
             },
-          ] as unknown as GetRecordsResponse<R>;
+          ] as unknown as GetRecordsResponse<R>);
         }
         async bulkRequest(): Promise<BulkRequestResponse> {
           return;
@@ -156,10 +158,12 @@ describe("InterpreterImpl", () => {
         });
         it("should fail to get a record", async () => {
           cleanUp();
+          // When
           const result = await KIO.getRecord("record", {
             app,
             id: 9999,
           }).commit(interpreter);
+          // Then
           expect(result).toStrictEqual(
             new Left({
               id: expect.anything(),
@@ -169,51 +173,70 @@ describe("InterpreterImpl", () => {
           );
         });
       });
-      it("GetRecords", async () => {
-        cleanUp();
-        // Given
-        const record: KVPairs<Fields> = {
-          text: { value: `test_${new Date().toTimeString()}` },
-        };
-        const { id } = await kClient.record.addRecord({
-          app,
-          record,
-        });
-        const { records: expectedRecords } = await kClient.record.getRecords<
-          Pick<KVPairs<SavedFields>, "text" | "$revision" | "$id">
-        >({
-          app,
-          fields: ["text", "$revision", "$id"],
-          query: `$id = ${id}`,
-        });
-        // When
-        const result = await KIO.getRecords<
-          "records",
-          ArrayElm<typeof expectedRecords>
-        >("records", {
-          app,
-          fields: ["text"],
-          query: `$id = ${id}`,
-        })
-          .map((a, s) => {
-            expect(s).toStrictEqual({
-              records: new KRecordList(
-                expectedRecords.map(
-                  (expectedRecord) =>
-                    new KRecord(
-                      expectedRecord,
-                      app,
-                      expectedRecord.$id.value,
-                      expectedRecord.$revision.value,
-                    ),
-                ),
-              ),
-            });
-            return a;
+      describe("GetRecords", () => {
+        it("should get records", async () => {
+          cleanUp();
+          // Given
+          const record: KVPairs<Fields> = {
+            text: { value: `test_${new Date().toTimeString()}` },
+          };
+          const { id } = await kClient.record.addRecord({
+            app,
+            record,
+          });
+          const { records: expectedRecords } = await kClient.record.getRecords<
+            Pick<KVPairs<SavedFields>, "text" | "$revision" | "$id">
+          >({
+            app,
+            fields: ["text", "$revision", "$id"],
+            query: `$id = ${id}`,
+          });
+          // When
+          const result = await KIO.getRecords<
+            "records",
+            ArrayElm<typeof expectedRecords>
+          >("records", {
+            app,
+            fields: ["text"],
+            query: `$id = ${id}`,
           })
-          .commit(interpreter);
-        // Then
-        expect(result).toStrictEqual(new Right(expectedRecords));
+            .map((a, s) => {
+              expect(s).toStrictEqual({
+                records: new KRecordList(
+                  expectedRecords.map(
+                    (expectedRecord) =>
+                      new KRecord(
+                        expectedRecord,
+                        app,
+                        expectedRecord.$id.value,
+                        expectedRecord.$revision.value,
+                      ),
+                  ),
+                ),
+              });
+              return a;
+            })
+            .commit(interpreter);
+          // Then
+          expect(result).toStrictEqual(new Right(expectedRecords));
+        });
+        it("should fail to get records", async () => {
+          cleanUp();
+          // When
+          const result = await KIO.getRecords("records", {
+            app,
+            fields: ["text"],
+            query: "invalid query",
+          }).commit(interpreter);
+          // Then
+          expect(result).toStrictEqual(
+            new Left({
+              id: expect.anything(),
+              code: expect.anything(),
+              message: expect.anything(),
+            }),
+          );
+        });
       });
       it("AddRecord", async () => {
         cleanUp();

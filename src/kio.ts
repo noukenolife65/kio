@@ -142,17 +142,17 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
 
   static getRecords<R extends KFields>(
     args: GetRecordsArgs,
-  ): KIO<object, never, R, KRecordList<R>>;
+  ): KIO<object, KError, R, KRecordList<R>>;
   static getRecords<N extends string, R extends KFields>(
     name: N,
     args: GetRecordsArgs,
-  ): KIO<KIOS<N, R, KRecordList<R>>, never, R, KRecordList<R>>;
+  ): KIO<KIOS<N, R, KRecordList<R>>, KError, R, KRecordList<R>>;
   static getRecords<N extends string, R extends KFields>(
     nameOrArgs: N | GetRecordsArgs,
     args?: GetRecordsArgs,
   ):
-    | KIO<object, never, R, KRecordList<R>>
-    | KIO<KIOS<N, R, KRecordList<R>>, never, R, KRecordList<R>> {
+    | KIO<object, KError, R, KRecordList<R>>
+    | KIO<KIOS<N, R, KRecordList<R>>, KError, R, KRecordList<R>> {
     if (arguments.length === 1 && typeof nameOrArgs === "object") {
       return new KIO({
         kind: "GetRecords",

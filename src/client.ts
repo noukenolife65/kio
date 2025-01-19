@@ -19,7 +19,9 @@ export type GetRecordsParams = {
   query?: string;
   totalCount?: boolean;
 };
-export type GetRecordsResponse<R extends KFields> = R[];
+export type GetRecordsResponse<R extends KFields> = {
+  records: R[];
+};
 export type AddRecordRequest = {
   method: "POST";
   api: "/k/v1/record.json";
@@ -62,7 +64,7 @@ export interface KintoneClient {
   ): Promise<Either<KError, GetRecordResponse>>;
   getRecords<R extends KFields>(
     params: GetRecordsParams,
-  ): Promise<GetRecordsResponse<R>>;
+  ): Promise<Either<KError, GetRecordsResponse<R>>>;
   bulkRequest(params: BulkRequestParams): Promise<BulkRequestResponse>;
 }
 
@@ -94,9 +96,21 @@ export class KintoneClientImpl implements KintoneClient {
 
   async getRecords<R extends KFields>(
     params: GetRecordsParams,
-  ): Promise<GetRecordsResponse<R>> {
-    const { records } = await this.client.record.getRecords(params);
-    return records as unknown as GetRecordsResponse<R>;
+  ): Promise<Either<KError, GetRecordsResponse<R>>> {
+    try {
+      const result = await this.client.record.getRecords(params);
+      return new Right(result as unknown as GetRecordsResponse<R>);
+    } catch (e) {
+      if (e instanceof KintoneRestAPIError) {
+        return new Left({
+          id: e.id,
+          code: e.code,
+          message: e.message,
+        });
+      } else {
+        throw e;
+      }
+    }
   }
 
   async bulkRequest(params: BulkRequestParams): Promise<BulkRequestResponse> {
