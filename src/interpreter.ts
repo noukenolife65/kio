@@ -111,27 +111,39 @@ export class InterpreterImpl implements Interpreter {
         const fields = orgFields
           ? [...orgFields, "$id", "$revision"]
           : undefined;
-        const result = await this.client.getRecords<KIdField & KRevisionField>({
+        const response = await this.client.getRecords<
+          KIdField & KRevisionField
+        >({
           app,
           fields,
           query,
         });
-        const kRecordList = new KRecordList(
-          result.map(
-            (record) =>
-              new KRecord(
-                record,
-                app,
-                record.$id.value,
-                record.$revision.value,
-              ),
-          ),
-        );
-        return new Right([
-          bulkRequests,
-          name ? { ...state, [name]: kRecordList } : state,
-          kRecordList,
-        ] as [BulkRequest[], S, D]);
+        return (() => {
+          switch (response.kind) {
+            case "Left": {
+              return response as Left<E>;
+            }
+            case "Right": {
+              const { records } = response.value;
+              const kRecordList = new KRecordList(
+                records.map(
+                  (record) =>
+                    new KRecord(
+                      record,
+                      app,
+                      record.$id.value,
+                      record.$revision.value,
+                    ),
+                ),
+              );
+              return new Right([
+                bulkRequests,
+                name ? { ...state, [name]: kRecordList } : state,
+                kRecordList,
+              ] as [BulkRequest[], S, D]);
+            }
+          }
+        })();
       }
       case "AddRecord": {
         const { record } = kioa;
