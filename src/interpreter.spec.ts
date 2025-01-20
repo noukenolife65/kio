@@ -238,30 +238,53 @@ describe("InterpreterImpl", () => {
           );
         });
       });
-      it("AddRecord", async () => {
-        cleanUp();
-        // Given
-        const record: KVPairs<Fields> = {
-          text: { value: `test_${new Date().toTimeString()}` },
-        };
-        // When
-        const result = await KIO.succeed(1)
-          .flatMap("addRecord", () =>
-            KIO.addRecord({
-              app,
-              record,
+      describe("AddRecord", () => {
+        it("should add a record", async () => {
+          cleanUp();
+          // Given
+          const record: KVPairs<Fields> = {
+            text: { value: `test_${new Date().toTimeString()}` },
+          };
+          // When
+          const result = await KIO.succeed(1)
+            .flatMap("addRecord", () =>
+              KIO.addRecord({
+                app,
+                record,
+              }),
+            )
+            .flatMap(() => KIO.commit())
+            .run(interpreter);
+          // Then
+          const savedRecords = await kClient.record.getAllRecords<
+            KVPairs<Fields>
+          >({ app });
+          expect(savedRecords.map((r) => r.text.value)).toStrictEqual([
+            record.text.value,
+          ]);
+          expect(result).toStrictEqual(new Right(undefined));
+        });
+        it("should fail to add a record", async () => {
+          cleanUp();
+          // When
+          const result = await KIO.succeed(1)
+            .flatMap("addRecord", () =>
+              KIO.addRecord({
+                app,
+                record: { invalidField: { value: "" } },
+              }),
+            )
+            .flatMap(() => KIO.commit())
+            .run(interpreter);
+          // Then
+          expect(result).toStrictEqual(
+            new Left({
+              id: expect.anything(),
+              code: expect.anything(),
+              message: expect.anything(),
             }),
-          )
-          .flatMap(() => KIO.commit())
-          .run(interpreter);
-        // Then
-        const savedRecords = await kClient.record.getAllRecords<
-          KVPairs<Fields>
-        >({ app });
-        expect(savedRecords.map((r) => r.text.value)).toStrictEqual([
-          record.text.value,
-        ]);
-        expect(result).toStrictEqual(new Right(undefined));
+          );
+        });
       });
       it("UpdateRecord", async () => {
         cleanUp();

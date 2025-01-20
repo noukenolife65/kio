@@ -119,8 +119,7 @@ export class KintoneClientImpl implements KintoneClient {
     params: BulkRequestParams,
   ): Promise<Either<KError, BulkRequestResponse>> {
     try {
-      const { results } = await this.client.bulkRequest(params);
-      console.log(results);
+      await this.client.bulkRequest(params);
       return new Right(undefined);
     } catch (e) {
       if (e instanceof KintoneRestAPIError) {
