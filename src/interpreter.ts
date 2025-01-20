@@ -210,6 +210,33 @@ export class InterpreterImpl implements Interpreter {
           new KNothing(),
         ] as [BulkRequest[], S, D]);
       }
+      case "Commit": {
+        if (bulkRequests.length > 0) {
+          const result = await this.client.bulkRequest({
+            requests: bulkRequests,
+          });
+          return (() => {
+            switch (result.kind) {
+              case "Left": {
+                return result as Left<E>;
+              }
+              case "Right": {
+                return new Right([
+                  Array<BulkRequest>(),
+                  state,
+                  new KNothing(),
+                ] as [BulkRequest[], S, D]);
+              }
+            }
+          })();
+        } else {
+          return new Right([Array<BulkRequest>(), state, new KNothing()] as [
+            BulkRequest[],
+            S,
+            D,
+          ]);
+        }
+      }
     }
   }
 
@@ -221,10 +248,7 @@ export class InterpreterImpl implements Interpreter {
       case "Left":
         return result;
       case "Right": {
-        const [bulkRequests, , a] = result.value;
-        if (bulkRequests.length > 0) {
-          await this.client.bulkRequest({ requests: bulkRequests });
-        }
+        const [, , a] = result.value;
         return new Right(a.value as D extends KRecordList<A> ? A[] : A);
       }
     }

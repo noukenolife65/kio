@@ -38,8 +38,8 @@ describe("InterpreterImpl", () => {
             },
           ] as unknown as GetRecordsResponse<R>);
         }
-        async bulkRequest(): Promise<BulkRequestResponse> {
-          return;
+        async bulkRequest(): Promise<Either<KError, BulkRequestResponse>> {
+          return new Right(undefined);
         }
       }
       const fakeClient = new FakeKintoneClient();
@@ -252,6 +252,7 @@ describe("InterpreterImpl", () => {
               record,
             }),
           )
+          .flatMap(() => KIO.commit())
           .run(interpreter);
         // Then
         const savedRecords = await kClient.record.getAllRecords<
@@ -293,6 +294,7 @@ describe("InterpreterImpl", () => {
               })),
             }),
           )
+          .flatMap(() => KIO.commit())
           .run(interpreter);
         // Then
         const { record: updatedRecord } = await kClient.record.getRecord({
@@ -335,6 +337,7 @@ describe("InterpreterImpl", () => {
               record,
             }),
           )
+          .flatMap(() => KIO.commit())
           .run(interpreter);
         // Then
         const { records: noRecords } = await kClient.record.getRecords<
