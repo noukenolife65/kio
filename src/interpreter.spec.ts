@@ -51,7 +51,7 @@ describe("InterpreterImpl", () => {
               expect(s).toStrictEqual({ succeed: new KValue(1) });
               return a;
             })
-            .commit(interpreter);
+            .run(interpreter);
           expect(result).toStrictEqual(new Right(1));
         });
         it("without state", async () => {
@@ -60,14 +60,14 @@ describe("InterpreterImpl", () => {
               expect(s).toStrictEqual({});
               return a;
             })
-            .commit(interpreter);
+            .run(interpreter);
           expect(result).toStrictEqual(new Right(1));
         });
       });
       it("Fail", async () => {
         const result = await KIO.fail("error")
           .map(() => expect.fail())
-          .commit(interpreter);
+          .run(interpreter);
         expect(result).toStrictEqual(new Left("error"));
       });
       it("FlatMap", async () => {
@@ -83,13 +83,13 @@ describe("InterpreterImpl", () => {
             });
             return a;
           })
-          .commit(interpreter);
+          .run(interpreter);
         expect(success).toStrictEqual(new Right(5));
 
         const failure = await KIO.succeed(1)
           .flatMap(() => KIO.fail("error"))
           .flatMap(() => KIO.succeed(1))
-          .commit(interpreter);
+          .run(interpreter);
         expect(failure).toStrictEqual(new Left("error"));
       });
     });
@@ -152,7 +152,7 @@ describe("InterpreterImpl", () => {
               });
               return a;
             })
-            .commit(interpreter);
+            .run(interpreter);
           // Then
           expect(result).toStrictEqual(new Right(expectedRecord));
         });
@@ -162,7 +162,7 @@ describe("InterpreterImpl", () => {
           const result = await KIO.getRecord("record", {
             app,
             id: 9999,
-          }).commit(interpreter);
+          }).run(interpreter);
           // Then
           expect(result).toStrictEqual(
             new Left({
@@ -216,7 +216,7 @@ describe("InterpreterImpl", () => {
               });
               return a;
             })
-            .commit(interpreter);
+            .run(interpreter);
           // Then
           expect(result).toStrictEqual(new Right(expectedRecords));
         });
@@ -227,7 +227,7 @@ describe("InterpreterImpl", () => {
             app,
             fields: ["text"],
             query: "invalid query",
-          }).commit(interpreter);
+          }).run(interpreter);
           // Then
           expect(result).toStrictEqual(
             new Left({
@@ -252,7 +252,7 @@ describe("InterpreterImpl", () => {
               record,
             }),
           )
-          .commit(interpreter);
+          .run(interpreter);
         // Then
         const savedRecords = await kClient.record.getAllRecords<
           KVPairs<Fields>
@@ -293,7 +293,7 @@ describe("InterpreterImpl", () => {
               })),
             }),
           )
-          .commit(interpreter);
+          .run(interpreter);
         // Then
         const { record: updatedRecord } = await kClient.record.getRecord({
           app,
@@ -335,7 +335,7 @@ describe("InterpreterImpl", () => {
               record,
             }),
           )
-          .commit(interpreter);
+          .run(interpreter);
         // Then
         const { records: noRecords } = await kClient.record.getRecords<
           KVPairs<SavedFields>

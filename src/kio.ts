@@ -199,7 +199,7 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
     });
   }
 
-  async commit(
+  async run(
     interpreter: Interpreter,
   ): Promise<Either<E, D extends KRecordList<A> ? A[] : A>> {
     return interpreter.interpret(this.kioa);
