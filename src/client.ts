@@ -65,7 +65,9 @@ export interface KintoneClient {
   getRecords<R extends KFields>(
     params: GetRecordsParams,
   ): Promise<Either<KError, GetRecordsResponse<R>>>;
-  bulkRequest(params: BulkRequestParams): Promise<BulkRequestResponse>;
+  bulkRequest(
+    params: BulkRequestParams,
+  ): Promise<Either<KError, BulkRequestResponse>>;
 }
 
 export class KintoneClientImpl implements KintoneClient {
@@ -113,9 +115,23 @@ export class KintoneClientImpl implements KintoneClient {
     }
   }
 
-  async bulkRequest(params: BulkRequestParams): Promise<BulkRequestResponse> {
-    await this.client.bulkRequest(params);
-    // TODO: Extract error responses from results
-    return;
+  async bulkRequest(
+    params: BulkRequestParams,
+  ): Promise<Either<KError, BulkRequestResponse>> {
+    try {
+      const { results } = await this.client.bulkRequest(params);
+      console.log(results);
+      return new Right(undefined);
+    } catch (e) {
+      if (e instanceof KintoneRestAPIError) {
+        return new Left({
+          id: e.id,
+          code: e.code,
+          message: e.message,
+        });
+      } else {
+        throw e;
+      }
+    }
   }
 }

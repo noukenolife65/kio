@@ -199,6 +199,10 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
     });
   }
 
+  static commit(): KIO<object, KError, void, KNothing> {
+    return new KIO({ kind: "Commit" });
+  }
+
   async run(
     interpreter: Interpreter,
   ): Promise<Either<E, D extends KRecordList<A> ? A[] : A>> {
@@ -239,4 +243,7 @@ export type KIOA<E, A, D extends KData<A>> =
   | {
       kind: "DeleteRecord";
       record: KRecord<KFields>;
+    }
+  | {
+      kind: "Commit";
     };
