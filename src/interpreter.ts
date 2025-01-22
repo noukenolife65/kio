@@ -40,7 +40,7 @@ export class InterpreterImpl implements Interpreter {
           ? { ...state, [kioa.name]: kioa.value }
           : state;
         return Promise.resolve(
-          new Right([bulkRequests, newState, kioa.value] as [
+          new Right([Array<BulkRequest>(), newState, kioa.value] as [
             BulkRequest[],
             S,
             D,
@@ -58,11 +58,8 @@ export class InterpreterImpl implements Interpreter {
               return r1 as Left<E>;
             case "Right": {
               const [bulkRequests1, s1, a1] = r1.value;
-              const r2 = await this._interpret(
-                bulkRequests1,
-                s1,
-                kioa.f(a1, s1),
-              );
+              const kioa2 = kioa.f(a1, s1);
+              const r2 = await this._interpret(bulkRequests1, s1, kioa2);
               return (() => {
                 switch (r2.kind) {
                   case "Left":
@@ -71,7 +68,9 @@ export class InterpreterImpl implements Interpreter {
                     const [bulkRequests2, , a2] = r2.value;
                     const s2 = kioa.name ? { ...s1, [kioa.name]: a2 } : s1;
                     return new Right([
-                      [...bulkRequests1, ...bulkRequests2],
+                      kioa2.kind === "Commit"
+                        ? []
+                        : [...bulkRequests1, ...bulkRequests2],
                       s2,
                       a2,
                     ] as [BulkRequest[], S, D]);
@@ -98,7 +97,7 @@ export class InterpreterImpl implements Interpreter {
               const id = record.$id.value;
               const kRecord = new KRecord(record, kioa.app, id, revision);
               return new Right([
-                bulkRequests,
+                Array<BulkRequest>(),
                 kioa.name ? { ...state, [kioa.name]: kRecord } : state,
                 kRecord,
               ] as [BulkRequest[], S, D]);
@@ -137,7 +136,7 @@ export class InterpreterImpl implements Interpreter {
                 ),
               );
               return new Right([
-                bulkRequests,
+                Array<BulkRequest>(),
                 name ? { ...state, [name]: kRecordList } : state,
                 kRecordList,
               ] as [BulkRequest[], S, D]);
@@ -155,11 +154,11 @@ export class InterpreterImpl implements Interpreter {
             record: record.value,
           },
         };
-        return new Right([
-          [...bulkRequests, addRecordRequest],
-          state,
-          new KNothing(),
-        ] as [BulkRequest[], S, D]);
+        return new Right([[addRecordRequest], state, new KNothing()] as [
+          BulkRequest[],
+          S,
+          D,
+        ]);
       }
       case "UpdateRecord": {
         const { record } = kioa;
@@ -188,9 +187,14 @@ export class InterpreterImpl implements Interpreter {
           },
         };
         return new Right([
-          [...bulkRequests, updateRecordRequest],
+          [updateRecordRequest],
           state,
-          new KNothing(),
+          new KRecord(
+            record.value,
+            record.app,
+            record.id,
+            Number(record.revision) + 1,
+          ),
         ] as [BulkRequest[], S, D]);
       }
       case "DeleteRecord": {
@@ -204,11 +208,11 @@ export class InterpreterImpl implements Interpreter {
             revisions: [record.revision ?? -1],
           },
         };
-        return new Right([
-          [...bulkRequests, deleteRecordRequest],
-          state,
-          new KNothing(),
-        ] as [BulkRequest[], S, D]);
+        return new Right([[deleteRecordRequest], state, new KNothing()] as [
+          BulkRequest[],
+          S,
+          D,
+        ]);
       }
       case "Commit": {
         if (bulkRequests.length > 0) {
