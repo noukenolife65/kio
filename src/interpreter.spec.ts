@@ -9,7 +9,14 @@ import {
   KintoneClient,
   KintoneClientImpl,
 } from "./client.ts";
-import { KError, KFields, KRecord, KRecordList, KValue } from "./data.ts";
+import {
+  KError,
+  KFields,
+  KNothing,
+  KRecord,
+  KRecordList,
+  KValue,
+} from "./data.ts";
 import { KintoneRestAPIClient } from "@kintone/rest-api-client";
 import { ArrayElm, KVPairs } from "./helper.ts";
 import SavedFields = kintone.types.SavedFields;
@@ -370,6 +377,44 @@ describe("InterpreterImpl", () => {
         });
         expect(noRecords).toStrictEqual([]);
         expect(result).toStrictEqual(new Right(undefined));
+      });
+      describe("Commit", () => {
+        it("should commit", async () => {
+          cleanUp();
+          // When
+          const result = await KIO.succeed({ text: { value: "test" } })
+            .flatMap("newRecord", (a) =>
+              KIO.addRecord({
+                app,
+                record: a.value,
+              }),
+            )
+            .flatMap(() => KIO.commit())
+            .flatMap("savepoint1", () => KIO.getRecords({ app }))
+            .map((a) => {
+              return a.update((record) => ({
+                ...record,
+                text: { value: "updated" },
+              }));
+            })
+            .flatMap((a) => {
+              return KIO.updateRecord({ record: a.records[0] });
+            })
+            // .flatMap(() => KIO.commit())
+            .flatMap((record) => {
+              return KIO.deleteRecord({ record });
+            })
+            .flatMap(() => KIO.commit())
+            .flatMap("savepoint2", () => KIO.getRecords({ app }))
+            .map((_a, s) => {
+              expect(s.savepoint2.records).toHaveLength(0);
+              return new KNothing();
+            })
+            .run(interpreter);
+          // Then
+          expect(result).toStrictEqual(new Right(undefined));
+        });
+        it("should rollback", async () => {});
       });
     });
   });

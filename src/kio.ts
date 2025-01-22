@@ -183,7 +183,7 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
 
   static updateRecord<R extends KFields>(args: {
     record: KRecord<R>;
-  }): KIO<object, never, void, KNothing> {
+  }): KIO<object, never, R, KRecord<R>> {
     return new KIO({
       kind: "UpdateRecord",
       ...args,
