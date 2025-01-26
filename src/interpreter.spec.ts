@@ -414,7 +414,30 @@ describe("InterpreterImpl", () => {
           // Then
           expect(result).toStrictEqual(new Right(undefined));
         });
-        it("should rollback", async () => {});
+        it("should rollback", async () => {
+          cleanUp();
+          // When
+          await KIO.succeed({ text: { value: "test" } })
+            .flatMap((a) =>
+              KIO.addRecord({
+                app,
+                record: a.value,
+              }),
+            )
+            .flatMap(() => KIO.commit())
+            .flatMap("savepoint1", () => KIO.getRecords({ app }))
+            .flatMap((_, s) =>
+              KIO.deleteRecord({ record: s.savepoint1.records[0] }),
+            )
+            .flatMap((_, s) =>
+              KIO.updateRecord({ record: s.savepoint1.records[0] }),
+            )
+            .flatMap(() => KIO.commit())
+            .run(interpreter);
+          // Then
+          const { records } = await kClient.record.getRecords({ app });
+          expect(records).toHaveLength(1);
+        });
       });
     });
   });
