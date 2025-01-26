@@ -2,6 +2,7 @@ import { Interpreter } from "./interpreter.ts";
 import { Either } from "./either.ts";
 import {
   KData,
+  KError,
   KFields,
   KNewRecord,
   KNothing,
@@ -112,17 +113,17 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
 
   static getRecord<R extends KFields>(
     args: GetRecordArgs,
-  ): KIO<object, never, R, KRecord<R>>;
+  ): KIO<object, KError, R, KRecord<R>>;
   static getRecord<N extends string, R extends KFields>(
     name: N,
     args: GetRecordArgs,
-  ): KIO<KIOS<N, R, KRecord<R>>, never, R, KRecord<R>>;
+  ): KIO<KIOS<N, R, KRecord<R>>, KError, R, KRecord<R>>;
   static getRecord<N extends string, R extends KFields>(
     nameOrArgs: N | GetRecordArgs,
     args?: GetRecordArgs,
   ):
-    | KIO<object, never, R, KRecord<R>>
-    | KIO<KIOS<N, R, KRecord<R>>, never, R, KRecord<R>> {
+    | KIO<object, KError, R, KRecord<R>>
+    | KIO<KIOS<N, R, KRecord<R>>, KError, R, KRecord<R>> {
     if (arguments.length === 1 && typeof nameOrArgs === "object") {
       return new KIO({
         kind: "GetRecord",
@@ -141,17 +142,17 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
 
   static getRecords<R extends KFields>(
     args: GetRecordsArgs,
-  ): KIO<object, never, R, KRecordList<R>>;
+  ): KIO<object, KError, R, KRecordList<R>>;
   static getRecords<N extends string, R extends KFields>(
     name: N,
     args: GetRecordsArgs,
-  ): KIO<KIOS<N, R, KRecordList<R>>, never, R, KRecordList<R>>;
+  ): KIO<KIOS<N, R, KRecordList<R>>, KError, R, KRecordList<R>>;
   static getRecords<N extends string, R extends KFields>(
     nameOrArgs: N | GetRecordsArgs,
     args?: GetRecordsArgs,
   ):
-    | KIO<object, never, R, KRecordList<R>>
-    | KIO<KIOS<N, R, KRecordList<R>>, never, R, KRecordList<R>> {
+    | KIO<object, KError, R, KRecordList<R>>
+    | KIO<KIOS<N, R, KRecordList<R>>, KError, R, KRecordList<R>> {
     if (arguments.length === 1 && typeof nameOrArgs === "object") {
       return new KIO({
         kind: "GetRecords",
@@ -182,7 +183,7 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
 
   static updateRecord<R extends KFields>(args: {
     record: KRecord<R>;
-  }): KIO<object, never, void, KNothing> {
+  }): KIO<object, never, R, KRecord<R>> {
     return new KIO({
       kind: "UpdateRecord",
       ...args,
@@ -198,7 +199,11 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
     });
   }
 
-  async commit(
+  static commit(): KIO<object, KError, void, KNothing> {
+    return new KIO({ kind: "Commit" });
+  }
+
+  async run(
     interpreter: Interpreter,
   ): Promise<Either<E, D extends KRecordList<A> ? A[] : A>> {
     return interpreter.interpret(this.kioa);
@@ -238,4 +243,7 @@ export type KIOA<E, A, D extends KData<A>> =
   | {
       kind: "DeleteRecord";
       record: KRecord<KFields>;
+    }
+  | {
+      kind: "Commit";
     };
