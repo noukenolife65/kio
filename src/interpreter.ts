@@ -40,7 +40,7 @@ export class InterpreterImpl implements Interpreter {
           ? { ...state, [kioa.name]: kioa.value }
           : state;
         return Promise.resolve(
-          new Right([bulkRequests, newState, kioa.value] as [
+          new Right([Array<BulkRequest>(), newState, kioa.value] as [
             BulkRequest[],
             S,
             D,
@@ -58,11 +58,8 @@ export class InterpreterImpl implements Interpreter {
               return r1 as Left<E>;
             case "Right": {
               const [bulkRequests1, s1, a1] = r1.value;
-              const r2 = await this._interpret(
-                bulkRequests1,
-                s1,
-                kioa.f(a1, s1),
-              );
+              const kioa2 = kioa.f(a1, s1);
+              const r2 = await this._interpret(bulkRequests1, s1, kioa2);
               return (() => {
                 switch (r2.kind) {
                   case "Left":
@@ -71,7 +68,9 @@ export class InterpreterImpl implements Interpreter {
                     const [bulkRequests2, , a2] = r2.value;
                     const s2 = kioa.name ? { ...s1, [kioa.name]: a2 } : s1;
                     return new Right([
-                      [...bulkRequests1, ...bulkRequests2],
+                      kioa2.kind === "Commit"
+                        ? []
+                        : [...bulkRequests1, ...bulkRequests2],
                       s2,
                       a2,
                     ] as [BulkRequest[], S, D]);
@@ -83,45 +82,67 @@ export class InterpreterImpl implements Interpreter {
         })();
       }
       case "GetRecord": {
-        const { record } = await this.client.getRecord({
+        const response = await this.client.getRecord({
           app: kioa.app,
           id: kioa.id,
         });
-        const revision = record.$revision.value;
-        const id = record.$id.value;
-        const kRecord = new KRecord(record, kioa.app, id, revision);
-        return new Right([
-          bulkRequests,
-          kioa.name ? { ...state, [kioa.name]: kRecord } : state,
-          kRecord,
-        ] as [BulkRequest[], S, D]);
+        return (() => {
+          switch (response.kind) {
+            case "Left": {
+              return response as Left<E>;
+            }
+            case "Right": {
+              const { record } = response.value;
+              const revision = record.$revision.value;
+              const id = record.$id.value;
+              const kRecord = new KRecord(record, kioa.app, id, revision);
+              return new Right([
+                Array<BulkRequest>(),
+                kioa.name ? { ...state, [kioa.name]: kRecord } : state,
+                kRecord,
+              ] as [BulkRequest[], S, D]);
+            }
+          }
+        })();
       }
       case "GetRecords": {
         const { name, app, fields: orgFields, query } = kioa;
         const fields = orgFields
           ? [...orgFields, "$id", "$revision"]
           : undefined;
-        const result = await this.client.getRecords<KIdField & KRevisionField>({
+        const response = await this.client.getRecords<
+          KIdField & KRevisionField
+        >({
           app,
           fields,
           query,
         });
-        const kRecordList = new KRecordList(
-          result.map(
-            (record) =>
-              new KRecord(
-                record,
-                app,
-                record.$id.value,
-                record.$revision.value,
-              ),
-          ),
-        );
-        return new Right([
-          bulkRequests,
-          name ? { ...state, [name]: kRecordList } : state,
-          kRecordList,
-        ] as [BulkRequest[], S, D]);
+        return (() => {
+          switch (response.kind) {
+            case "Left": {
+              return response as Left<E>;
+            }
+            case "Right": {
+              const { records } = response.value;
+              const kRecordList = new KRecordList(
+                records.map(
+                  (record) =>
+                    new KRecord(
+                      record,
+                      app,
+                      record.$id.value,
+                      record.$revision.value,
+                    ),
+                ),
+              );
+              return new Right([
+                Array<BulkRequest>(),
+                name ? { ...state, [name]: kRecordList } : state,
+                kRecordList,
+              ] as [BulkRequest[], S, D]);
+            }
+          }
+        })();
       }
       case "AddRecord": {
         const { record } = kioa;
@@ -133,11 +154,11 @@ export class InterpreterImpl implements Interpreter {
             record: record.value,
           },
         };
-        return new Right([
-          [...bulkRequests, addRecordRequest],
-          state,
-          new KNothing(),
-        ] as [BulkRequest[], S, D]);
+        return new Right([[addRecordRequest], state, new KNothing()] as [
+          BulkRequest[],
+          S,
+          D,
+        ]);
       }
       case "UpdateRecord": {
         const { record } = kioa;
@@ -166,9 +187,14 @@ export class InterpreterImpl implements Interpreter {
           },
         };
         return new Right([
-          [...bulkRequests, updateRecordRequest],
+          [updateRecordRequest],
           state,
-          new KNothing(),
+          new KRecord(
+            record.value,
+            record.app,
+            record.id,
+            Number(record.revision) + 1,
+          ),
         ] as [BulkRequest[], S, D]);
       }
       case "DeleteRecord": {
@@ -182,11 +208,38 @@ export class InterpreterImpl implements Interpreter {
             revisions: [record.revision ?? -1],
           },
         };
-        return new Right([
-          [...bulkRequests, deleteRecordRequest],
-          state,
-          new KNothing(),
-        ] as [BulkRequest[], S, D]);
+        return new Right([[deleteRecordRequest], state, new KNothing()] as [
+          BulkRequest[],
+          S,
+          D,
+        ]);
+      }
+      case "Commit": {
+        if (bulkRequests.length > 0) {
+          const result = await this.client.bulkRequest({
+            requests: bulkRequests,
+          });
+          return (() => {
+            switch (result.kind) {
+              case "Left": {
+                return result as Left<E>;
+              }
+              case "Right": {
+                return new Right([
+                  Array<BulkRequest>(),
+                  state,
+                  new KNothing(),
+                ] as [BulkRequest[], S, D]);
+              }
+            }
+          })();
+        } else {
+          return new Right([Array<BulkRequest>(), state, new KNothing()] as [
+            BulkRequest[],
+            S,
+            D,
+          ]);
+        }
       }
     }
   }
@@ -199,10 +252,7 @@ export class InterpreterImpl implements Interpreter {
       case "Left":
         return result;
       case "Right": {
-        const [bulkRequests, , a] = result.value;
-        if (bulkRequests.length > 0) {
-          await this.client.bulkRequest({ requests: bulkRequests });
-        }
+        const [, , a] = result.value;
         return new Right(a.value as D extends KRecordList<A> ? A[] : A);
       }
     }
