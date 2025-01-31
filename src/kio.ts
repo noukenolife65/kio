@@ -56,6 +56,18 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
     return new KIO({ kind: "Fail", error: e });
   }
 
+  fold<S1 extends object, E1, B, D1 extends KData<B>>(
+    success: (a: D, s: S) => KIO<S1, E1, B, D1>,
+    failure: (e: E, s: S) => KIO<S1, E1, B, D1>,
+  ): KIO<S1, E1, B, D1> {
+    return new KIO({
+      kind: "Fold",
+      self: this.kioa,
+      success: (a, s) => success(a as D, s as S).kioa,
+      failure: (e, s) => failure(e as E, s as S).kioa,
+    });
+  }
+
   flatMap<S1 extends object, E1, B, D1 extends KData<B>>(
     f: (a: D, s: S) => KIO<S1, E1, B, D1>,
   ): KIO<S, E | E1, B, D1>;
@@ -219,6 +231,12 @@ export type KIOA<E, A, D extends KData<A>> =
     }
   | { kind: "Succeed"; name?: string; value: D }
   | { kind: "Fail"; error: E }
+  | {
+      kind: "Fold";
+      self: KIOA<unknown, unknown, KData<unknown>>;
+      success: (a: unknown, s: unknown) => KIOA<E, A, D>;
+      failure: (e: unknown, s: unknown) => KIOA<E, A, D>;
+    }
   | {
       kind: "GetRecord";
       name?: string;

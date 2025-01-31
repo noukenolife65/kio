@@ -33,7 +33,7 @@ export class InterpreterImpl implements Interpreter {
     bulkRequests: BulkRequest[],
     state: S,
     kioa: KIOA<E, A, D>,
-  ): Promise<Either<E, [BulkRequest[], S, D]>> {
+  ): Promise<Either<[S, E], [BulkRequest[], S, D]>> {
     switch (kioa.kind) {
       case "Succeed": {
         const newState = kioa.name
@@ -48,14 +48,14 @@ export class InterpreterImpl implements Interpreter {
         );
       }
       case "Fail": {
-        return Promise.resolve(new Left(kioa.error));
+        return Promise.resolve(new Left([state, kioa.error] as [S, E]));
       }
       case "FlatMap": {
         const r1 = await this._interpret(bulkRequests, state, kioa.self);
         return (async () => {
           switch (r1.kind) {
             case "Left":
-              return r1 as Left<E>;
+              return r1 as Left<[S, E]>;
             case "Right": {
               const [bulkRequests1, s1, a1] = r1.value;
               const kioa2 = kioa.f(a1, s1);
@@ -81,6 +81,21 @@ export class InterpreterImpl implements Interpreter {
           }
         })();
       }
+      case "Fold": {
+        const r = await this._interpret(bulkRequests, state, kioa.self);
+        return (() => {
+          switch (r.kind) {
+            case "Left": {
+              const [s, e] = r.value;
+              return this._interpret(bulkRequests, s, kioa.failure(e, s));
+            }
+            case "Right": {
+              const [bulkRequests1, s1, a1] = r.value;
+              return this._interpret(bulkRequests1, s1, kioa.success(a1, s1));
+            }
+          }
+        })();
+      }
       case "GetRecord": {
         const response = await this.client.getRecord({
           app: kioa.app,
@@ -89,7 +104,7 @@ export class InterpreterImpl implements Interpreter {
         return (() => {
           switch (response.kind) {
             case "Left": {
-              return response as Left<E>;
+              return new Left([state, response.value] as [S, E]);
             }
             case "Right": {
               const { record } = response.value;
@@ -120,7 +135,7 @@ export class InterpreterImpl implements Interpreter {
         return (() => {
           switch (response.kind) {
             case "Left": {
-              return response as Left<E>;
+              return new Left([state, response.value] as [S, E]);
             }
             case "Right": {
               const { records } = response.value;
@@ -222,7 +237,7 @@ export class InterpreterImpl implements Interpreter {
           return (() => {
             switch (result.kind) {
               case "Left": {
-                return result as Left<E>;
+                return new Left([state, result.value] as [S, E]);
               }
               case "Right": {
                 return new Right([
@@ -249,8 +264,10 @@ export class InterpreterImpl implements Interpreter {
   ): Promise<Either<E, D extends KRecordList<A> ? A[] : A>> {
     const result = await this._interpret([], {}, kioa);
     switch (result.kind) {
-      case "Left":
-        return result;
+      case "Left": {
+        const [, error] = result.value;
+        return new Left(error);
+      }
       case "Right": {
         const [, , a] = result.value;
         return new Right(a.value as D extends KRecordList<A> ? A[] : A);
