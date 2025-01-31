@@ -99,6 +99,33 @@ describe("InterpreterImpl", () => {
           .run(interpreter);
         expect(failure).toStrictEqual(new Left("error"));
       });
+      it("Fold", async () => {
+        await KIO.succeed("value", 1)
+          .flatMap((_a, _s) => {
+            return KIO.fail("error");
+          })
+          .fold(
+            () => {
+              expect.fail("should not be called");
+            },
+            (e, s) => {
+              expect(e).toBe("error");
+              expect(s).toStrictEqual({ value: new KValue(1) });
+              return KIO.succeed(2);
+            },
+          )
+          .fold(
+            (a, s) => {
+              expect(a).toStrictEqual(new KValue(2));
+              expect(s).toStrictEqual({ value: new KValue(1) });
+              return KIO.succeed(undefined);
+            },
+            () => {
+              expect.fail("should not be called");
+            },
+          )
+          .run(interpreter);
+      });
     });
     describe("Kintone Operations", () => {
       const app = 1;
