@@ -1,6 +1,6 @@
 import { describe, expect, it, onTestFinished } from "vitest";
 import { KIO } from "./kio.ts";
-import { InterpreterImpl } from "./interpreter.ts";
+import { KIORunnerImpl } from "./runner.ts";
 import { Either, Left, Right } from "./either.ts";
 import {
   BulkRequestResponse,
@@ -22,8 +22,8 @@ import { ArrayElm, KVPairs } from "./helper.ts";
 import SavedFields = kintone.types.SavedFields;
 import Fields = kintone.types.Fields;
 
-describe("InterpreterImpl", () => {
-  describe("interpret", () => {
+describe("KIORunnerImpl", () => {
+  describe("run", () => {
     describe("Basic Operations", () => {
       class FakeKintoneClient implements KintoneClient {
         async getRecord(): Promise<Either<KError, GetRecordResponse>> {
@@ -50,7 +50,7 @@ describe("InterpreterImpl", () => {
         }
       }
       const fakeClient = new FakeKintoneClient();
-      const interpreter = new InterpreterImpl(fakeClient);
+      const runner = new KIORunnerImpl(fakeClient);
       describe("Succeed", () => {
         it("with state", async () => {
           const result = await KIO.succeed("succeed", 1)
@@ -58,7 +58,7 @@ describe("InterpreterImpl", () => {
               expect(s).toStrictEqual({ succeed: new KValue(1) });
               return a;
             })
-            .run(interpreter);
+            .run(runner);
           expect(result).toStrictEqual(new Right(1));
         });
         it("without state", async () => {
@@ -67,14 +67,14 @@ describe("InterpreterImpl", () => {
               expect(s).toStrictEqual({});
               return a;
             })
-            .run(interpreter);
+            .run(runner);
           expect(result).toStrictEqual(new Right(1));
         });
       });
       it("Fail", async () => {
         const result = await KIO.fail("error")
           .map(() => expect.fail())
-          .run(interpreter);
+          .run(runner);
         expect(result).toStrictEqual(new Left("error"));
       });
       it("FlatMap", async () => {
@@ -90,13 +90,13 @@ describe("InterpreterImpl", () => {
             });
             return a;
           })
-          .run(interpreter);
+          .run(runner);
         expect(success).toStrictEqual(new Right(5));
 
         const failure = await KIO.succeed(1)
           .flatMap(() => KIO.fail("error"))
           .flatMap(() => KIO.succeed(1))
-          .run(interpreter);
+          .run(runner);
         expect(failure).toStrictEqual(new Left("error"));
       });
       it("Fold", async () => {
@@ -124,7 +124,7 @@ describe("InterpreterImpl", () => {
               expect.fail("should not be called");
             },
           )
-          .run(interpreter);
+          .run(runner);
       });
     });
     describe("Kintone Operations", () => {
@@ -136,7 +136,7 @@ describe("InterpreterImpl", () => {
         },
       });
       const client = new KintoneClientImpl(kClient);
-      const interpreter = new InterpreterImpl(client);
+      const runner = new KIORunnerImpl(client);
       const cleanUp = () => {
         onTestFinished(async () => {
           const records = await kClient.record.getAllRecords<{
@@ -186,7 +186,7 @@ describe("InterpreterImpl", () => {
               });
               return a;
             })
-            .run(interpreter);
+            .run(runner);
           // Then
           expect(result).toStrictEqual(new Right(expectedRecord));
         });
@@ -196,7 +196,7 @@ describe("InterpreterImpl", () => {
           const result = await KIO.getRecord("record", {
             app,
             id: 9999,
-          }).run(interpreter);
+          }).run(runner);
           // Then
           expect(result).toStrictEqual(
             new Left({
@@ -250,7 +250,7 @@ describe("InterpreterImpl", () => {
               });
               return a;
             })
-            .run(interpreter);
+            .run(runner);
           // Then
           expect(result).toStrictEqual(new Right(expectedRecords));
         });
@@ -261,7 +261,7 @@ describe("InterpreterImpl", () => {
             app,
             fields: ["text"],
             query: "invalid query",
-          }).run(interpreter);
+          }).run(runner);
           // Then
           expect(result).toStrictEqual(
             new Left({
@@ -288,7 +288,7 @@ describe("InterpreterImpl", () => {
               }),
             )
             .flatMap(() => KIO.commit())
-            .run(interpreter);
+            .run(runner);
           // Then
           const savedRecords = await kClient.record.getAllRecords<
             KVPairs<Fields>
@@ -309,7 +309,7 @@ describe("InterpreterImpl", () => {
               }),
             )
             .flatMap(() => KIO.commit())
-            .run(interpreter);
+            .run(runner);
           // Then
           expect(result).toStrictEqual(
             new Left({
@@ -352,7 +352,7 @@ describe("InterpreterImpl", () => {
             }),
           )
           .flatMap(() => KIO.commit())
-          .run(interpreter);
+          .run(runner);
         // Then
         const { record: updatedRecord } = await kClient.record.getRecord({
           app,
@@ -395,7 +395,7 @@ describe("InterpreterImpl", () => {
             }),
           )
           .flatMap(() => KIO.commit())
-          .run(interpreter);
+          .run(runner);
         // Then
         const { records: noRecords } = await kClient.record.getRecords<
           KVPairs<SavedFields>
@@ -437,7 +437,7 @@ describe("InterpreterImpl", () => {
               expect(s.savepoint2.records).toHaveLength(0);
               return new KNothing();
             })
-            .run(interpreter);
+            .run(runner);
           // Then
           expect(result).toStrictEqual(new Right(undefined));
         });
@@ -460,7 +460,7 @@ describe("InterpreterImpl", () => {
               KIO.updateRecord({ record: s.savepoint1.records[0] }),
             )
             .flatMap(() => KIO.commit())
-            .run(interpreter);
+            .run(runner);
           // Then
           const { records } = await kClient.record.getRecords({ app });
           expect(records).toHaveLength(1);

@@ -16,13 +16,13 @@ import {
   KRevisionField,
 } from "./data.ts";
 
-export interface Interpreter {
-  interpret<E, A, D extends KData<A>>(
+export interface KIORunner {
+  run<E, A, D extends KData<A>>(
     kioa: KIOA<E, A, D>,
   ): Promise<Either<E, D extends KRecordList<A> ? A[] : A>>;
 }
 
-export class InterpreterImpl implements Interpreter {
+export class KIORunnerImpl implements KIORunner {
   private client: KintoneClient;
 
   constructor(client: KintoneClient) {
@@ -259,7 +259,7 @@ export class InterpreterImpl implements Interpreter {
     }
   }
 
-  async interpret<E, A, D extends KData<A>>(
+  async run<E, A, D extends KData<A>>(
     kioa: KIOA<E, A, D>,
   ): Promise<Either<E, D extends KRecordList<A> ? A[] : A>> {
     const result = await this._interpret([], {}, kioa);
