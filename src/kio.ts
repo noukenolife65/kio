@@ -1,4 +1,4 @@
-import { Interpreter } from "./interpreter.ts";
+import { KIORunner } from "./runner.ts";
 import { Either } from "./either.ts";
 import {
   KData,
@@ -216,9 +216,9 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
   }
 
   async run(
-    interpreter: Interpreter,
+    runner: KIORunner,
   ): Promise<Either<E, D extends KRecordList<A> ? A[] : A>> {
-    return interpreter.interpret(this.kioa);
+    return runner.run(this.kioa);
   }
 }
 
