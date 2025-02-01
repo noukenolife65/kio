@@ -101,7 +101,7 @@ describe("InterpreterImpl", () => {
       });
       it("Fold", async () => {
         await KIO.succeed("value", 1)
-          .flatMap((_a, _s) => {
+          .flatMap(() => {
             return KIO.fail("error");
           })
           .fold(
