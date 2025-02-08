@@ -5,6 +5,7 @@ import {
   BulkRequest,
   DeleteRecordsRequest,
   KintoneClient,
+  KintoneClientImpl,
   UpdateRecordRequest,
 } from "./client.ts";
 import {
@@ -15,6 +16,7 @@ import {
   KRecordList,
   KRevisionField,
 } from "./data.ts";
+import { KintoneRestAPIClient } from "@kintone/rest-api-client";
 
 export interface KIORunner {
   run<E, A, D extends KData<A>>(
@@ -275,3 +277,6 @@ export class KIORunnerImpl implements KIORunner {
     }
   }
 }
+
+export const createRunner = (client: KintoneRestAPIClient): KIORunner =>
+  new KIORunnerImpl(new KintoneClientImpl(client));
