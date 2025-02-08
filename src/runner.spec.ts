@@ -1,13 +1,12 @@
 import { describe, expect, it, onTestFinished } from "vitest";
 import { KIO } from "./kio.ts";
-import { KIORunnerImpl } from "./runner.ts";
+import { createRunner, KIORunnerImpl } from "./runner.ts";
 import { Either, Left, Right } from "./either.ts";
 import {
   BulkRequestResponse,
   GetRecordResponse,
   GetRecordsResponse,
   KintoneClient,
-  KintoneClientImpl,
 } from "./client.ts";
 import {
   KError,
@@ -135,8 +134,7 @@ describe("KIORunnerImpl", () => {
           apiToken: process.env.KINTONE_API_TOKEN,
         },
       });
-      const client = new KintoneClientImpl(kClient);
-      const runner = new KIORunnerImpl(client);
+      const runner = createRunner(kClient);
       const cleanUp = () => {
         onTestFinished(async () => {
           const records = await kClient.record.getAllRecords<{
