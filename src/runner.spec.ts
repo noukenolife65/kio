@@ -50,25 +50,9 @@ describe("KIORunnerImpl", () => {
       }
       const fakeClient = new FakeKintoneClient();
       const runner = new KIORunnerImpl(fakeClient);
-      describe("Succeed", () => {
-        it("with state", async () => {
-          const result = await KIO.succeed("succeed", 1)
-            .map((a, s) => {
-              expect(s).toStrictEqual({ succeed: new KValue(1) });
-              return a;
-            })
-            .run(runner);
-          expect(result).toStrictEqual(new Right(1));
-        });
-        it("without state", async () => {
-          const result = await KIO.succeed(1)
-            .map((a, s) => {
-              expect(s).toStrictEqual({});
-              return a;
-            })
-            .run(runner);
-          expect(result).toStrictEqual(new Right(1));
-        });
+      it("Succeed", async () => {
+        const result = await KIO.succeed(1).run(runner);
+        expect(result).toStrictEqual(new Right(1));
       });
       it("Fail", async () => {
         const result = await KIO.fail("error")
@@ -99,10 +83,9 @@ describe("KIORunnerImpl", () => {
         expect(failure).toStrictEqual(new Left("error"));
       });
       it("Fold", async () => {
-        await KIO.succeed("value", 1)
-          .flatMap(() => {
-            return KIO.fail("error");
-          })
+        await KIO.start()
+          .flatMap("value", () => KIO.succeed(1))
+          .flatMap(() => KIO.fail("error"))
           .fold(
             () => {
               expect.fail("should not be called");
@@ -169,19 +152,16 @@ describe("KIORunnerImpl", () => {
             id,
           });
           // When
-          const result = await KIO.getRecord<"record", typeof expectedRecord>(
-            "record",
-            { app, id },
-          )
-            .map((a, s) => {
-              expect(s).toStrictEqual({
-                record: new KRecord(
+          const result = await KIO.getRecord<typeof expectedRecord>({ app, id })
+            .map((a) => {
+              expect(a).toStrictEqual(
+                new KRecord(
                   expectedRecord,
                   app,
                   expectedRecord.$id.value,
                   expectedRecord.$revision.value,
                 ),
-              });
+              );
               return a;
             })
             .run(runner);
@@ -191,7 +171,7 @@ describe("KIORunnerImpl", () => {
         it("should fail to get a record", async () => {
           cleanUp();
           // When
-          const result = await KIO.getRecord("record", {
+          const result = await KIO.getRecord({
             app,
             id: 9999,
           }).run(runner);
@@ -224,17 +204,16 @@ describe("KIORunnerImpl", () => {
             query: `$id = ${id}`,
           });
           // When
-          const result = await KIO.getRecords<
-            "records",
-            ArrayElm<typeof expectedRecords>
-          >("records", {
-            app,
-            fields: ["text"],
-            query: `$id = ${id}`,
-          })
-            .map((a, s) => {
-              expect(s).toStrictEqual({
-                records: new KRecordList(
+          const result = await KIO.getRecords<ArrayElm<typeof expectedRecords>>(
+            {
+              app,
+              fields: ["text"],
+              query: `$id = ${id}`,
+            },
+          )
+            .map((a) => {
+              expect(a).toStrictEqual(
+                new KRecordList(
                   expectedRecords.map(
                     (expectedRecord) =>
                       new KRecord(
@@ -245,7 +224,7 @@ describe("KIORunnerImpl", () => {
                       ),
                   ),
                 ),
-              });
+              );
               return a;
             })
             .run(runner);
@@ -255,7 +234,7 @@ describe("KIORunnerImpl", () => {
         it("should fail to get records", async () => {
           cleanUp();
           // When
-          const result = await KIO.getRecords("records", {
+          const result = await KIO.getRecords({
             app,
             fields: ["text"],
             query: "invalid query",
@@ -278,13 +257,7 @@ describe("KIORunnerImpl", () => {
             text: { value: `test_${new Date().toTimeString()}` },
           };
           // When
-          const result = await KIO.succeed(1)
-            .flatMap("addRecord", () =>
-              KIO.addRecord({
-                app,
-                record,
-              }),
-            )
+          const result = await KIO.addRecord({ app, record })
             .flatMap(() => KIO.commit())
             .run(runner);
           // Then
@@ -299,13 +272,10 @@ describe("KIORunnerImpl", () => {
         it("should fail to add a record", async () => {
           cleanUp();
           // When
-          const result = await KIO.succeed(1)
-            .flatMap("addRecord", () =>
-              KIO.addRecord({
-                app,
-                record: { invalidField: { value: "" } },
-              }),
-            )
+          const result = await KIO.addRecord({
+            app,
+            record: { invalidField: { value: "" } },
+          })
             .flatMap(() => KIO.commit())
             .run(runner);
           // Then
@@ -334,14 +304,11 @@ describe("KIORunnerImpl", () => {
           app,
         });
         // When
-        const result = await KIO.succeed(1)
-          .flatMap("getRecord", () =>
-            KIO.getRecord<KVPairs<Fields>>({
-              app,
-              id: savedRecord.$id.value,
-            }),
-          )
-          .flatMap("updateRecord", (a) =>
+        const result = await KIO.getRecord<KVPairs<Fields>>({
+          app,
+          id: savedRecord.$id.value,
+        })
+          .flatMap((a) =>
             KIO.updateRecord({
               record: a.update((value) => ({
                 ...value,
@@ -380,18 +347,11 @@ describe("KIORunnerImpl", () => {
           app,
         });
         // When
-        const result = await KIO.succeed(1)
-          .flatMap("getRecord", () =>
-            KIO.getRecord<KVPairs<Fields>>({
-              app,
-              id: savedRecord.$id.value,
-            }),
-          )
-          .flatMap("deleteRecord", (record) =>
-            KIO.deleteRecord({
-              record,
-            }),
-          )
+        const result = await KIO.getRecord<KVPairs<Fields>>({
+          app,
+          id: savedRecord.$id.value,
+        })
+          .flatMap((record) => KIO.deleteRecord({ record }))
           .flatMap(() => KIO.commit())
           .run(runner);
         // Then
