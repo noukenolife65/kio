@@ -39,11 +39,7 @@ export class KIORunnerImpl implements KIORunner {
     switch (kioa.kind) {
       case "Succeed": {
         return Promise.resolve(
-          new Right([Array<BulkRequest>(), state, kioa.value] as [
-            BulkRequest[],
-            S,
-            D,
-          ]),
+          new Right([bulkRequests, state, kioa.value] as [BulkRequest[], S, D]),
         );
       }
       case "Fail": {
@@ -66,13 +62,11 @@ export class KIORunnerImpl implements KIORunner {
                   case "Right": {
                     const [bulkRequests2, , a2] = r2.value;
                     const s2 = kioa.name ? { ...s1, [kioa.name]: a2 } : s1;
-                    return new Right([
-                      kioa2.kind === "Commit"
-                        ? []
-                        : [...bulkRequests1, ...bulkRequests2],
-                      s2,
-                      a2,
-                    ] as [BulkRequest[], S, D]);
+                    return new Right([bulkRequests2, s2, a2] as [
+                      BulkRequest[],
+                      S,
+                      D,
+                    ]);
                   }
                 }
               })();
@@ -110,7 +104,7 @@ export class KIORunnerImpl implements KIORunner {
               const revision = record.$revision.value;
               const id = record.$id.value;
               const kRecord = new KRecord(record, kioa.app, id, revision);
-              return new Right([Array<BulkRequest>(), state, kRecord] as [
+              return new Right([bulkRequests, state, kRecord] as [
                 BulkRequest[],
                 S,
                 D,
@@ -149,7 +143,7 @@ export class KIORunnerImpl implements KIORunner {
                     ),
                 ),
               );
-              return new Right([Array<BulkRequest>(), state, kRecordList] as [
+              return new Right([bulkRequests, state, kRecordList] as [
                 BulkRequest[],
                 S,
                 D,
@@ -168,11 +162,11 @@ export class KIORunnerImpl implements KIORunner {
             record: record.value,
           },
         };
-        return new Right([[addRecordRequest], state, new KNothing()] as [
-          BulkRequest[],
-          S,
-          D,
-        ]);
+        return new Right([
+          [...bulkRequests, addRecordRequest],
+          state,
+          new KNothing(),
+        ] as [BulkRequest[], S, D]);
       }
       case "UpdateRecord": {
         const { record } = kioa;
@@ -201,7 +195,7 @@ export class KIORunnerImpl implements KIORunner {
           },
         };
         return new Right([
-          [updateRecordRequest],
+          [...bulkRequests, updateRecordRequest],
           state,
           new KRecord(
             record.value,
@@ -222,11 +216,11 @@ export class KIORunnerImpl implements KIORunner {
             revisions: [record.revision ?? -1],
           },
         };
-        return new Right([[deleteRecordRequest], state, new KNothing()] as [
-          BulkRequest[],
-          S,
-          D,
-        ]);
+        return new Right([
+          [...bulkRequests, deleteRecordRequest],
+          state,
+          new KNothing(),
+        ] as [BulkRequest[], S, D]);
       }
       case "Commit": {
         if (bulkRequests.length > 0) {
