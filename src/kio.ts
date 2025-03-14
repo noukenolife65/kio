@@ -157,9 +157,7 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
     return new KIO({ kind: "Commit" });
   }
 
-  async run(
-    runner: KIORunner,
-  ): Promise<Either<E, D extends KRecordList<A> ? A[] : A>> {
+  async run(runner: KIORunner): Promise<Either<E, D["value"]>> {
     return runner.run(this.kioa);
   }
 }
