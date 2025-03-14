@@ -21,7 +21,7 @@ import { KintoneRestAPIClient } from "@kintone/rest-api-client";
 export interface KIORunner {
   run<E, A, D extends KData<A>>(
     kioa: KIOA<E, A, D>,
-  ): Promise<Either<E, D extends KRecordList<A> ? A[] : A>>;
+  ): Promise<Either<E, D["value"]>>;
 }
 
 export class KIORunnerImpl implements KIORunner {
@@ -254,7 +254,7 @@ export class KIORunnerImpl implements KIORunner {
 
   async run<E, A, D extends KData<A>>(
     kioa: KIOA<E, A, D>,
-  ): Promise<Either<E, D extends KRecordList<A> ? A[] : A>> {
+  ): Promise<Either<E, D["value"]>> {
     const result = await this._interpret([], {}, kioa);
     switch (result.kind) {
       case "Left": {
@@ -263,7 +263,7 @@ export class KIORunnerImpl implements KIORunner {
       }
       case "Right": {
         const [, , a] = result.value;
-        return new Right(a.value as D extends KRecordList<A> ? A[] : A);
+        return new Right(a.value);
       }
     }
   }
