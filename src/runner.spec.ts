@@ -288,6 +288,46 @@ describe("KIORunnerImpl", () => {
           );
         });
       });
+      describe("AddRecords", () => {
+        it("should add records", async () => {
+          cleanUp();
+          // Given
+          const records: KVPairs<Fields>[] = [
+            { text: { value: `test_${new Date().toTimeString()}` } },
+            { text: { value: `test_${new Date().toTimeString()}` } },
+          ];
+          // When
+          const result = await KIO.addRecords({ app, records })
+            .flatMap(() => KIO.commit())
+            .run(runner);
+          // Then
+          const savedRecords = await kClient.record.getAllRecords<
+            KVPairs<Fields>
+          >({ app });
+          expect(savedRecords.map((r) => r.text.value)).toStrictEqual(
+            records.map((r) => r.text.value),
+          );
+          expect(result).toStrictEqual(new Right(undefined));
+        });
+        it("should fail to add records", async () => {
+          cleanUp();
+          // When
+          const result = await KIO.addRecords({
+            app,
+            records: [{ invalidField: { value: "" } }],
+          })
+            .flatMap(() => KIO.commit())
+            .run(runner);
+          // Then
+          expect(result).toStrictEqual(
+            new Left({
+              id: expect.anything(),
+              code: expect.anything(),
+              message: expect.anything(),
+            }),
+          );
+        });
+      });
       it("UpdateRecord", async () => {
         cleanUp();
         // Given
