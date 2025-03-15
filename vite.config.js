@@ -6,6 +6,10 @@ export default defineConfig({
       entry: "src/index.ts",
       name: "kio",
       fileName: "kio",
+      formats: ["es", "cjs"],
+    },
+    rollupOptions: {
+      external: ["@kintone/rest-api-client"],
     },
   },
 });
