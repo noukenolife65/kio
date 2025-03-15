@@ -71,6 +71,26 @@ export class KRecordList<T> {
   }
 }
 
+export class KNewRecordList<T> {
+  readonly kind: "KNewRecordList" = "KNewRecordList" as const;
+  readonly app: string | number;
+  readonly records: KNewRecord<T>[];
+  constructor(app: string | number, records: KNewRecord<T>[]) {
+    this.app = app;
+    this.records = records;
+  }
+  get value(): T[] {
+    return this.records.map((record) => record.value);
+  }
+
+  update(f: (value: T) => T): KNewRecordList<T> {
+    return new KNewRecordList(
+      this.app,
+      this.records.map((record) => record.update(f)),
+    );
+  }
+}
+
 export class KNothing {
   readonly kind: "KNothing" = "KNothing" as const;
   readonly value: void = undefined;
@@ -81,6 +101,7 @@ export type KData<T> =
   | KRecord<T>
   | KNewRecord<T>
   | KRecordList<T>
+  | KNewRecordList<T>
   | KNothing;
 
 export type KError = {

@@ -2,6 +2,7 @@ import { KIOA } from "./kio.ts";
 import { Either, Left, Right } from "./either.ts";
 import {
   AddRecordRequest,
+  AddRecordsRequest,
   BulkRequest,
   DeleteRecordsRequest,
   KintoneClient,
@@ -164,6 +165,22 @@ export class KIORunnerImpl implements KIORunner {
         };
         return new Right([
           [...bulkRequests, addRecordRequest],
+          state,
+          new KNothing(),
+        ] as [BulkRequest[], S, D]);
+      }
+      case "AddRecords": {
+        const { records } = kioa;
+        const addRecordsRequest: AddRecordsRequest = {
+          method: "POST",
+          api: "/k/v1/records.json",
+          payload: {
+            app: records.app,
+            records: records.value,
+          },
+        };
+        return new Right([
+          [...bulkRequests, addRecordsRequest],
           state,
           new KNothing(),
         ] as [BulkRequest[], S, D]);
