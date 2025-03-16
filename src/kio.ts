@@ -5,6 +5,7 @@ import {
   KError,
   KFields,
   KNewRecord,
+  KNewRecordList,
   KNothing,
   KRecord,
   KRecordList,
@@ -135,6 +136,21 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
     });
   }
 
+  static addRecords<R extends KFields>(args: {
+    app: number | string;
+    records: R[];
+  }): KIO<object, never, void, KNothing> {
+    const { app, records } = args;
+    const kNewRecords = new KNewRecordList(
+      app,
+      records.map((record) => new KNewRecord(record, app)),
+    );
+    return new KIO({
+      kind: "AddRecords",
+      records: kNewRecords,
+    });
+  }
+
   static updateRecord<R extends KFields>(args: {
     record: KRecord<R>;
   }): KIO<object, never, R, KRecord<R>> {
@@ -144,11 +160,29 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
     });
   }
 
+  static updateRecords<R extends KFields>(args: {
+    records: KRecordList<R>;
+  }): KIO<object, never, R, KRecordList<R>> {
+    return new KIO({
+      kind: "UpdateRecords",
+      ...args,
+    });
+  }
+
   static deleteRecord<R extends KFields>(args: {
     record: KRecord<R>;
   }): KIO<object, never, void, KNothing> {
     return new KIO({
       kind: "DeleteRecord",
+      ...args,
+    });
+  }
+
+  static deleteRecords<R extends KFields>(args: {
+    records: KRecordList<R>;
+  }): KIO<object, never, void, KNothing> {
+    return new KIO({
+      kind: "DeleteRecords",
       ...args,
     });
   }
@@ -193,12 +227,24 @@ export type KIOA<E, A, D extends KData<A>> =
       record: KNewRecord<KFields>;
     }
   | {
+      kind: "AddRecords";
+      records: KNewRecordList<KFields>;
+    }
+  | {
       kind: "UpdateRecord";
       record: KRecord<KFields>;
     }
   | {
+      kind: "UpdateRecords";
+      records: KRecordList<KFields>;
+    }
+  | {
       kind: "DeleteRecord";
       record: KRecord<KFields>;
+    }
+  | {
+      kind: "DeleteRecords";
+      records: KRecordList<KFields>;
     }
   | {
       kind: "Commit";
