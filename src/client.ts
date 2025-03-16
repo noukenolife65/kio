@@ -48,6 +48,18 @@ export type UpdateRecordRequest = {
     revision?: string | number;
   };
 };
+export type UpdateRecordsRequest = {
+  method: "PUT";
+  api: "/k/v1/records.json";
+  payload: {
+    app: string | number;
+    records: {
+      id: string | number;
+      record: KFields;
+      revision?: string | number;
+    }[];
+  };
+};
 export type DeleteRecordsRequest = {
   method: "DELETE";
   api: "/k/v1/records.json";
@@ -61,6 +73,7 @@ export type BulkRequest =
   | AddRecordRequest
   | AddRecordsRequest
   | UpdateRecordRequest
+  | UpdateRecordsRequest
   | DeleteRecordsRequest;
 export type BulkRequestParams = {
   requests: BulkRequest[];

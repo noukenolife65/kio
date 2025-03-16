@@ -214,6 +214,7 @@ describe("KIORunnerImpl", () => {
             .map((a) => {
               expect(a).toStrictEqual(
                 new KRecordList(
+                  app,
                   expectedRecords.map(
                     (expectedRecord) =>
                       new KRecord(
@@ -369,6 +370,48 @@ describe("KIORunnerImpl", () => {
           $revision: { ...savedRecord.$revision, value: "2" },
         };
         expect(updatedRecord).toStrictEqual(expectedRecord);
+        expect(result).toStrictEqual(new Right(undefined));
+      });
+      it("UpdateRecords", async () => {
+        cleanUp();
+        // Given
+        const records: KVPairs<Fields>[] = [
+          { text: { value: `test_${new Date().toTimeString()}` } },
+          { text: { value: `test_${new Date().toTimeString()}` } },
+        ];
+        await kClient.record.addRecords({
+          app,
+          records,
+        });
+        const { records: savedRecords } = await kClient.record.getRecords<
+          KVPairs<SavedFields>
+        >({
+          app,
+        });
+        // When
+        const result = await KIO.getRecords<KVPairs<Fields>>({
+          app,
+        })
+          .flatMap((a) =>
+            KIO.updateRecords({
+              records: a.update((value) => ({
+                ...value,
+                text: { value: "updated" },
+              })),
+            }),
+          )
+          .flatMap(() => KIO.commit())
+          .run(runner);
+        // Then
+        const updatedRecords = await kClient.record.getRecords({
+          app,
+        });
+        const expectedRecords = savedRecords.map((record) => ({
+          ...record,
+          text: { ...record.text, value: "updated" },
+          $revision: { ...record.$revision, value: "2" },
+        }));
+        expect(updatedRecords.records).toStrictEqual(expectedRecords);
         expect(result).toStrictEqual(new Right(undefined));
       });
       it("DeleteRecord", async () => {

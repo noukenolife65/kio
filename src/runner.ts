@@ -8,9 +8,11 @@ import {
   KintoneClient,
   KintoneClientImpl,
   UpdateRecordRequest,
+  UpdateRecordsRequest,
 } from "./client.ts";
 import {
   KData,
+  KFields,
   KIdField,
   KNothing,
   KRecord,
@@ -134,6 +136,7 @@ export class KIORunnerImpl implements KIORunner {
             case "Right": {
               const { records } = response.value;
               const kRecordList = new KRecordList(
+                app,
                 records.map(
                   (record) =>
                     new KRecord(
@@ -187,19 +190,8 @@ export class KIORunnerImpl implements KIORunner {
       }
       case "UpdateRecord": {
         const { record } = kioa;
-        const updatingRecord = Object.fromEntries(
-          Object.entries(record.value).filter(([, { type }]) => {
-            return (
-              !type ||
-              ![
-                "RECORD_NUMBER",
-                "MODIFIER",
-                "CREATOR",
-                "UPDATED_TIME",
-                "CREATED_TIME",
-              ].includes(type)
-            );
-          }),
+        const updatingRecord = this.removeProhibitedFieldsForUpdate(
+          record.value,
         );
         const updateRecordRequest: UpdateRecordRequest = {
           method: "PUT",
@@ -219,6 +211,42 @@ export class KIORunnerImpl implements KIORunner {
             record.app,
             record.id,
             Number(record.revision) + 1,
+          ),
+        ] as [BulkRequest[], S, D]);
+      }
+      case "UpdateRecords": {
+        const { records } = kioa;
+        const updatingRecords = records.records.map((record) => {
+          const updatingRecord = this.removeProhibitedFieldsForUpdate(
+            record.value,
+          );
+          return {
+            id: record.id,
+            record: updatingRecord,
+            revision: record.revision,
+          };
+        });
+        const updateRecordsRequest: UpdateRecordsRequest = {
+          method: "PUT",
+          api: "/k/v1/records.json",
+          payload: {
+            app: records.app,
+            records: updatingRecords,
+          },
+        };
+        return new Right([
+          [...bulkRequests, updateRecordsRequest],
+          state,
+          new KRecordList(
+            records.app,
+            records.records.map((record) => {
+              return new KRecord(
+                record.value,
+                records.app,
+                record.id,
+                Number(record.revision) + 1,
+              );
+            }),
           ),
         ] as [BulkRequest[], S, D]);
       }
@@ -267,6 +295,23 @@ export class KIORunnerImpl implements KIORunner {
         }
       }
     }
+  }
+
+  private removeProhibitedFieldsForUpdate(record: KFields) {
+    return Object.fromEntries(
+      Object.entries(record).filter(([, { type }]) => {
+        return (
+          !type ||
+          ![
+            "RECORD_NUMBER",
+            "MODIFIER",
+            "CREATOR",
+            "UPDATED_TIME",
+            "CREATED_TIME",
+          ].includes(type)
+        );
+      }),
+    );
   }
 
   async run<E, A, D extends KData<A>>(
