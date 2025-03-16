@@ -446,6 +446,33 @@ describe("KIORunnerImpl", () => {
         expect(noRecords).toStrictEqual([]);
         expect(result).toStrictEqual(new Right(undefined));
       });
+      it("DeleteRecords", async () => {
+        cleanUp();
+        // Given
+        const records: KVPairs<Fields>[] = [
+          { text: { value: `test_${new Date().toTimeString()}` } },
+          { text: { value: `test_${new Date().toTimeString()}` } },
+        ];
+        await kClient.record.addRecords({
+          app,
+          records,
+        });
+        // When
+        const result = await KIO.getRecords<KVPairs<Fields>>({
+          app,
+        })
+          .flatMap((a) => KIO.deleteRecords({ records: a }))
+          .flatMap(() => KIO.commit())
+          .run(runner);
+        // Then
+        const { records: noRecords } = await kClient.record.getRecords<
+          KVPairs<SavedFields>
+        >({
+          app,
+        });
+        expect(noRecords).toStrictEqual([]);
+        expect(result).toStrictEqual(new Right(undefined));
+      });
       describe("Commit", () => {
         it("should commit", async () => {
           cleanUp();
