@@ -267,6 +267,23 @@ export class KIORunnerImpl implements KIORunner {
           new KNothing(),
         ] as [BulkRequest[], S, D]);
       }
+      case "DeleteRecords": {
+        const { records } = kioa;
+        const deleteRecordsRequest: DeleteRecordsRequest = {
+          method: "DELETE",
+          api: "/k/v1/records.json",
+          payload: {
+            app: records.app,
+            ids: records.records.map((record) => record.id),
+            revisions: records.records.map((record) => record.revision ?? -1),
+          },
+        };
+        return new Right([
+          [...bulkRequests, deleteRecordsRequest],
+          state,
+          new KNothing(),
+        ] as [BulkRequest[], S, D]);
+      }
       case "Commit": {
         if (bulkRequests.length > 0) {
           const result = await this.client.bulkRequest({

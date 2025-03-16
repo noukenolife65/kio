@@ -178,6 +178,15 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
     });
   }
 
+  static deleteRecords<R extends KFields>(args: {
+    records: KRecordList<R>;
+  }): KIO<object, never, void, KNothing> {
+    return new KIO({
+      kind: "DeleteRecords",
+      ...args,
+    });
+  }
+
   static commit(): KIO<object, KError, void, KNothing> {
     return new KIO({ kind: "Commit" });
   }
@@ -232,6 +241,10 @@ export type KIOA<E, A, D extends KData<A>> =
   | {
       kind: "DeleteRecord";
       record: KRecord<KFields>;
+    }
+  | {
+      kind: "DeleteRecords";
+      records: KRecordList<KFields>;
     }
   | {
       kind: "Commit";
