@@ -3,12 +3,17 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "dist/kio.cjs",
+  "module": "dist/kio.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest",
-    "lint": "eslint"
+    "lint": "eslint",
+    "prepare": "npm run build"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
