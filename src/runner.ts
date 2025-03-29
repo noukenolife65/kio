@@ -30,26 +30,24 @@ export class KIORunnerImpl implements KIORunner {
     this.client = client;
   }
 
-  private async _interpret<S extends object, E, A>(
+  private async _interpret(
     bulkRequests: BulkRequest[],
-    state: S,
-    kioa: KIOA<E, A>,
-  ): Promise<Either<[S, E], [BulkRequest[], S, A]>> {
+    state: object,
+    kioa: KIOA<unknown, unknown>,
+  ): Promise<Either<[object, unknown], [BulkRequest[], object, unknown]>> {
     switch (kioa.kind) {
       case "Succeed": {
-        return Promise.resolve(
-          new Right([bulkRequests, state, kioa.value] as [BulkRequest[], S, A]),
-        );
+        return Promise.resolve(new Right([bulkRequests, state, kioa.value]));
       }
       case "Fail": {
-        return Promise.resolve(new Left([state, kioa.error] as [S, E]));
+        return Promise.resolve(new Left([state, kioa.error]));
       }
       case "AndThen": {
         const r1 = await this._interpret(bulkRequests, state, kioa.self);
         return (async () => {
           switch (r1.kind) {
             case "Left":
-              return r1 as Left<[S, E]>;
+              return r1;
             case "Right": {
               const [bulkRequests1, s1, a1] = r1.value;
               const kioa2 = kioa.f(a1, s1);
@@ -61,11 +59,7 @@ export class KIORunnerImpl implements KIORunner {
                   case "Right": {
                     const [bulkRequests2, , a2] = r2.value;
                     const s2 = kioa.name ? { ...s1, [kioa.name]: a2 } : s1;
-                    return new Right([bulkRequests2, s2, a2] as [
-                      BulkRequest[],
-                      S,
-                      A,
-                    ]);
+                    return new Right([bulkRequests2, s2, a2]);
                   }
                 }
               })();
@@ -96,18 +90,14 @@ export class KIORunnerImpl implements KIORunner {
         return (() => {
           switch (response.kind) {
             case "Left": {
-              return new Left([state, response.value] as [S, E]);
+              return new Left([state, response.value]);
             }
             case "Right": {
               const { record } = response.value;
               const revision = record.$revision.value;
               const id = record.$id.value;
               const kRecord = new KRecord(record, kioa.app, id, revision);
-              return new Right([bulkRequests, state, kRecord] as [
-                BulkRequest[],
-                S,
-                A,
-              ]);
+              return new Right([bulkRequests, state, kRecord]);
             }
           }
         })();
@@ -127,7 +117,7 @@ export class KIORunnerImpl implements KIORunner {
         return (() => {
           switch (response.kind) {
             case "Left": {
-              return new Left([state, response.value] as [S, E]);
+              return new Left([state, response.value]);
             }
             case "Right": {
               const { records } = response.value;
@@ -143,11 +133,7 @@ export class KIORunnerImpl implements KIORunner {
                     ),
                 ),
               );
-              return new Right([bulkRequests, state, kRecordList] as [
-                BulkRequest[],
-                S,
-                A,
-              ]);
+              return new Right([bulkRequests, state, kRecordList]);
             }
           }
         })();
@@ -166,7 +152,7 @@ export class KIORunnerImpl implements KIORunner {
           [...bulkRequests, addRecordRequest],
           state,
           undefined,
-        ] as [BulkRequest[], S, A]);
+        ]);
       }
       case "AddRecords": {
         const { records } = kioa;
@@ -182,7 +168,7 @@ export class KIORunnerImpl implements KIORunner {
           [...bulkRequests, addRecordsRequest],
           state,
           undefined,
-        ] as [BulkRequest[], S, A]);
+        ]);
       }
       case "UpdateRecord": {
         const { record } = kioa;
@@ -208,7 +194,7 @@ export class KIORunnerImpl implements KIORunner {
             record.id,
             Number(record.revision) + 1,
           ),
-        ] as [BulkRequest[], S, A]);
+        ]);
       }
       case "UpdateRecords": {
         const { records } = kioa;
@@ -244,7 +230,7 @@ export class KIORunnerImpl implements KIORunner {
               );
             }),
           ),
-        ] as [BulkRequest[], S, A]);
+        ]);
       }
       case "DeleteRecord": {
         const { record } = kioa;
@@ -261,7 +247,7 @@ export class KIORunnerImpl implements KIORunner {
           [...bulkRequests, deleteRecordRequest],
           state,
           undefined,
-        ] as [BulkRequest[], S, A]);
+        ]);
       }
       case "DeleteRecords": {
         const { records } = kioa;
@@ -278,7 +264,7 @@ export class KIORunnerImpl implements KIORunner {
           [...bulkRequests, deleteRecordsRequest],
           state,
           undefined,
-        ] as [BulkRequest[], S, A]);
+        ]);
       }
       case "Commit": {
         if (bulkRequests.length > 0) {
@@ -288,23 +274,15 @@ export class KIORunnerImpl implements KIORunner {
           return (() => {
             switch (result.kind) {
               case "Left": {
-                return new Left([state, result.value] as [S, E]);
+                return new Left([state, result.value]);
               }
               case "Right": {
-                return new Right([Array<BulkRequest>(), state, undefined] as [
-                  BulkRequest[],
-                  S,
-                  A,
-                ]);
+                return new Right([Array<BulkRequest>(), state, undefined]);
               }
             }
           })();
         } else {
-          return new Right([Array<BulkRequest>(), state, undefined] as [
-            BulkRequest[],
-            S,
-            A,
-          ]);
+          return new Right([Array<BulkRequest>(), state, undefined]);
         }
       }
     }
@@ -332,11 +310,11 @@ export class KIORunnerImpl implements KIORunner {
     switch (result.kind) {
       case "Left": {
         const [, error] = result.value;
-        return new Left(error);
+        return new Left(error) as Left<E>;
       }
       case "Right": {
         const [, , a] = result.value;
-        return new Right(a);
+        return new Right(a) as Right<A>;
       }
     }
   }
