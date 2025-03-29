@@ -45,7 +45,7 @@ export class KIO<S extends object, E, A> {
   fold<S1 extends object, E1, B>(
     success: (a: A, s: S) => KIO<S1, E1, B>,
     failure: (e: E, s: S) => KIO<S1, E1, B>,
-  ): KIO<S1, E1, B> {
+  ): KIO<S1, E | E1, B> {
     return new KIO({
       kind: "Fold",
       self: this.kioa,
