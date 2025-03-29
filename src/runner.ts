@@ -44,7 +44,7 @@ export class KIORunnerImpl implements KIORunner {
       case "Fail": {
         return Promise.resolve(new Left([state, kioa.error] as [S, E]));
       }
-      case "FlatMap": {
+      case "AndThen": {
         const r1 = await this._interpret(bulkRequests, state, kioa.self);
         return (async () => {
           switch (r1.kind) {

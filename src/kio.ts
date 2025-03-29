@@ -54,26 +54,26 @@ export class KIO<S extends object, E, A> {
     });
   }
 
-  flatMap<S1 extends object, E1, B>(
+  andThen<S1 extends object, E1, B>(
     f: (a: A, s: S) => KIO<S1, E1, B>,
   ): KIO<S, E | E1, B>;
-  flatMap<N extends string, S1 extends object, E1, B>(
+  andThen<N extends string, S1 extends object, E1, B>(
     name: N,
     f: (a: A, s: S) => KIO<S1, E1, B>,
   ): KIO<S & KIOS<N, B>, E | E1, B>;
-  flatMap<N extends string, S1 extends object, E1, B>(
+  andThen<N extends string, S1 extends object, E1, B>(
     nameOrF: N | ((a: A, s: S) => KIO<S1, E1, B>),
     f?: (a: A, s: S) => KIO<S1, E1, B>,
   ): KIO<S, E | E1, B> | KIO<S & KIOS<N, B>, E | E1, B> {
     if (arguments.length === 1 && typeof nameOrF === "function") {
       return new KIO({
-        kind: "FlatMap",
+        kind: "AndThen",
         self: this.kioa,
         f: (a, s) => nameOrF(a as A, s as S).kioa,
       });
     } else if (arguments.length === 2 && typeof nameOrF === "string") {
       return new KIO({
-        kind: "FlatMap",
+        kind: "AndThen",
         name: nameOrF,
         self: this.kioa,
         f: (a, s) => f!(a as A, s as S).kioa,
@@ -93,11 +93,11 @@ export class KIO<S extends object, E, A> {
     f?: (a: A, s: S) => B,
   ): KIO<S, E, B> | KIO<S & KIOS<N, B>, E, B> {
     if (arguments.length === 1 && typeof nameOrF === "function") {
-      return this.flatMap((a, s) => {
+      return this.andThen((a, s) => {
         return new KIO({ kind: "Succeed", value: nameOrF(a, s) });
       });
     } else if (arguments.length === 2 && typeof nameOrF === "string") {
-      return this.flatMap(nameOrF, (a, s) => {
+      return this.andThen(nameOrF, (a, s) => {
         return new KIO({ kind: "Succeed", value: f!(a, s) });
       });
     } else {
@@ -191,7 +191,7 @@ export class KIO<S extends object, E, A> {
 
 export type KIOA<E, A> =
   | {
-      kind: "FlatMap";
+      kind: "AndThen";
       name?: string;
       self: KIOA<unknown, unknown>;
       f: (a: unknown, s: unknown) => KIOA<E, A>;
