@@ -1,19 +1,16 @@
 import { KIORunner } from "./runner.ts";
 import { Either } from "./either.ts";
 import {
-  KData,
   KError,
   KFields,
   KNewRecord,
   KNewRecordList,
-  KNothing,
   KRecord,
   KRecordList,
-  KValue,
 } from "./data.ts";
 
-export type KIOS<T extends string, A, D extends KData<A> = KData<A>> = {
-  readonly [K in T]: D;
+export type KIOS<T extends string, A> = {
+  readonly [K in T]: A;
 };
 
 type GetRecordArgs = {
@@ -26,79 +23,75 @@ type GetRecordsArgs = {
   query?: string;
 };
 
-export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
-  private kioa: KIOA<E, A, D>;
+export class KIO<S extends object, E, A> {
+  private kioa: KIOA<E, A>;
 
-  private constructor(kioa: KIOA<E, A, D>) {
+  private constructor(kioa: KIOA<E, A>) {
     this.kioa = kioa;
   }
 
-  static start(): KIO<object, never, void, KNothing> {
-    return new KIO({ kind: "Succeed", value: new KNothing() });
+  static start(): KIO<object, never, void> {
+    return new KIO({ kind: "Succeed", value: undefined });
   }
 
-  static succeed<A>(a: A): KIO<object, never, A, KValue<A>> {
-    return new KIO({ kind: "Succeed", value: new KValue(a) });
+  static succeed<A>(a: A): KIO<object, never, A> {
+    return new KIO({ kind: "Succeed", value: a });
   }
 
-  static fail<E>(e: E): KIO<object, E, never, never> {
+  static fail<E>(e: E): KIO<object, E, never> {
     return new KIO({ kind: "Fail", error: e });
   }
 
-  fold<S1 extends object, E1, B, D1 extends KData<B>>(
-    success: (a: D, s: S) => KIO<S1, E1, B, D1>,
-    failure: (e: E, s: S) => KIO<S1, E1, B, D1>,
-  ): KIO<S1, E1, B, D1> {
+  fold<S1 extends object, E1, B>(
+    success: (a: A, s: S) => KIO<S1, E1, B>,
+    failure: (e: E, s: S) => KIO<S1, E1, B>,
+  ): KIO<S1, E1, B> {
     return new KIO({
       kind: "Fold",
       self: this.kioa,
-      success: (a, s) => success(a as D, s as S).kioa,
+      success: (a, s) => success(a as A, s as S).kioa,
       failure: (e, s) => failure(e as E, s as S).kioa,
     });
   }
 
-  flatMap<S1 extends object, E1, B, D1 extends KData<B>>(
-    f: (a: D, s: S) => KIO<S1, E1, B, D1>,
-  ): KIO<S, E | E1, B, D1>;
-  flatMap<N extends string, S1 extends object, E1, B, D1 extends KData<B>>(
+  flatMap<S1 extends object, E1, B>(
+    f: (a: A, s: S) => KIO<S1, E1, B>,
+  ): KIO<S, E | E1, B>;
+  flatMap<N extends string, S1 extends object, E1, B>(
     name: N,
-    f: (a: D, s: S) => KIO<S1, E1, B, D1>,
-  ): KIO<S & KIOS<N, B, D1>, E | E1, B, D1>;
-  flatMap<N extends string, S1 extends object, E1, B, D1 extends KData<B>>(
-    nameOrF: N | ((a: D, s: S) => KIO<S1, E1, B, D1>),
-    f?: (a: D, s: S) => KIO<S1, E1, B, D1>,
-  ): KIO<S, E | E1, B, D1> | KIO<S & KIOS<N, B, D1>, E | E1, B, D1> {
+    f: (a: A, s: S) => KIO<S1, E1, B>,
+  ): KIO<S & KIOS<N, B>, E | E1, B>;
+  flatMap<N extends string, S1 extends object, E1, B>(
+    nameOrF: N | ((a: A, s: S) => KIO<S1, E1, B>),
+    f?: (a: A, s: S) => KIO<S1, E1, B>,
+  ): KIO<S, E | E1, B> | KIO<S & KIOS<N, B>, E | E1, B> {
     if (arguments.length === 1 && typeof nameOrF === "function") {
       return new KIO({
         kind: "FlatMap",
         self: this.kioa,
-        f: (a, s) => nameOrF(a as D, s as S).kioa,
+        f: (a, s) => nameOrF(a as A, s as S).kioa,
       });
     } else if (arguments.length === 2 && typeof nameOrF === "string") {
       return new KIO({
         kind: "FlatMap",
         name: nameOrF,
         self: this.kioa,
-        f: (a, s) => f!(a as D, s as S).kioa,
+        f: (a, s) => f!(a as A, s as S).kioa,
       });
     } else {
       throw new Error("Invalid arguments");
     }
   }
 
-  map<B, D1 extends KData<B>>(
-    f: (a: D, s: S) => D1,
-  ): KIO<S, E, D1["value"], D1>;
-  map<N extends string, B, D1 extends KData<B>>(
+  map<B>(f: (a: A, s: S) => B): KIO<S, E, B>;
+  map<N extends string, B>(
     name: N,
-    f: (a: D, s: S) => D1,
-  ): KIO<S & KIOS<N, D1["value"], D1>, E, D1["value"], D1>;
-  map<N extends string, B, D1 extends KData<B>>(
-    nameOrF: N | ((a: D, s: S) => D1),
-    f?: (a: D, s: S) => D1,
-  ):
-    | KIO<S, E, D1["value"], D1>
-    | KIO<S & KIOS<N, D1["value"], D1>, E, D1["value"], D1> {
+    f: (a: A, s: S) => B,
+  ): KIO<S & KIOS<N, B>, E, B>;
+  map<N extends string, B>(
+    nameOrF: N | ((a: A, s: S) => B),
+    f?: (a: A, s: S) => B,
+  ): KIO<S, E, B> | KIO<S & KIOS<N, B>, E, B> {
     if (arguments.length === 1 && typeof nameOrF === "function") {
       return this.flatMap((a, s) => {
         return new KIO({ kind: "Succeed", value: nameOrF(a, s) });
@@ -114,20 +107,20 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
 
   static getRecord<R extends KFields>(
     args: GetRecordArgs,
-  ): KIO<object, KError, R, KRecord<R>> {
+  ): KIO<object, KError, KRecord<R>> {
     return new KIO({ kind: "GetRecord", ...args });
   }
 
   static getRecords<R extends KFields>(
     args: GetRecordsArgs,
-  ): KIO<object, KError, R, KRecordList<R>> {
+  ): KIO<object, KError, KRecordList<R>> {
     return new KIO({ kind: "GetRecords", ...args });
   }
 
   static addRecord<R extends KFields>(args: {
     app: number | string;
     record: R;
-  }): KIO<object, never, void, KNothing> {
+  }): KIO<object, never, void> {
     const { app, record } = args;
     const kRecord = new KNewRecord(record, app);
     return new KIO({
@@ -139,7 +132,7 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
   static addRecords<R extends KFields>(args: {
     app: number | string;
     records: R[];
-  }): KIO<object, never, void, KNothing> {
+  }): KIO<object, never, void> {
     const { app, records } = args;
     const kNewRecords = new KNewRecordList(
       app,
@@ -153,7 +146,7 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
 
   static updateRecord<R extends KFields>(args: {
     record: KRecord<R>;
-  }): KIO<object, never, R, KRecord<R>> {
+  }): KIO<object, never, KRecord<R>> {
     return new KIO({
       kind: "UpdateRecord",
       ...args,
@@ -162,7 +155,7 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
 
   static updateRecords<R extends KFields>(args: {
     records: KRecordList<R>;
-  }): KIO<object, never, R, KRecordList<R>> {
+  }): KIO<object, never, KRecordList<R>> {
     return new KIO({
       kind: "UpdateRecords",
       ...args,
@@ -171,7 +164,7 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
 
   static deleteRecord<R extends KFields>(args: {
     record: KRecord<R>;
-  }): KIO<object, never, void, KNothing> {
+  }): KIO<object, never, void> {
     return new KIO({
       kind: "DeleteRecord",
       ...args,
@@ -180,36 +173,36 @@ export class KIO<S extends object, E, A, D extends KData<A> = KData<A>> {
 
   static deleteRecords<R extends KFields>(args: {
     records: KRecordList<R>;
-  }): KIO<object, never, void, KNothing> {
+  }): KIO<object, never, void> {
     return new KIO({
       kind: "DeleteRecords",
       ...args,
     });
   }
 
-  static commit(): KIO<object, KError, void, KNothing> {
+  static commit(): KIO<object, KError, void> {
     return new KIO({ kind: "Commit" });
   }
 
-  async run(runner: KIORunner): Promise<Either<E, D["value"]>> {
+  async run(runner: KIORunner): Promise<Either<E, A>> {
     return runner.run(this.kioa);
   }
 }
 
-export type KIOA<E, A, D extends KData<A>> =
+export type KIOA<E, A> =
   | {
       kind: "FlatMap";
       name?: string;
-      self: KIOA<unknown, unknown, KData<unknown>>;
-      f: (a: unknown, s: unknown) => KIOA<E, A, D>;
+      self: KIOA<unknown, unknown>;
+      f: (a: unknown, s: unknown) => KIOA<E, A>;
     }
-  | { kind: "Succeed"; value: D }
+  | { kind: "Succeed"; value: A }
   | { kind: "Fail"; error: E }
   | {
       kind: "Fold";
-      self: KIOA<unknown, unknown, KData<unknown>>;
-      success: (a: unknown, s: unknown) => KIOA<E, A, D>;
-      failure: (e: unknown, s: unknown) => KIOA<E, A, D>;
+      self: KIOA<unknown, unknown>;
+      success: (a: unknown, s: unknown) => KIOA<E, A>;
+      failure: (e: unknown, s: unknown) => KIOA<E, A>;
     }
   | {
       kind: "GetRecord";

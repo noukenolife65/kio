@@ -7,18 +7,6 @@ export type KFields = {
 export type KIdField = { $id: { value: string | number } };
 export type KRevisionField = { $revision: { value: string | number } };
 
-export class KValue<T> {
-  readonly kind: "KValue" = "KValue" as const;
-  readonly value: T;
-  constructor(value: T) {
-    this.value = value;
-  }
-
-  update(f: (value: T) => T): KValue<T> {
-    return new KValue(f(this.value));
-  }
-}
-
 export class KNewRecord<T> {
   readonly kind: "KNewRecord" = "KNewRecord" as const;
   readonly value: T;
@@ -96,18 +84,11 @@ export class KNewRecordList<T> {
   }
 }
 
-export class KNothing {
-  readonly kind: "KNothing" = "KNothing" as const;
-  readonly value: void = undefined;
-}
-
 export type KData<T> =
-  | KValue<T>
   | KRecord<T>
   | KNewRecord<T>
   | KRecordList<T>
-  | KNewRecordList<T>
-  | KNothing;
+  | KNewRecordList<T>;
 
 export type KError = {
   id: string;
