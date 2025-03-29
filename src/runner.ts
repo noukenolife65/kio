@@ -42,6 +42,14 @@ export class KIORunnerImpl implements KIORunner {
       case "Fail": {
         return Promise.resolve(new Left([state, kioa.error]));
       }
+      case "Async": {
+        try {
+          const a = await kioa.f();
+          return new Right([bulkRequests, state, a]);
+        } catch (e) {
+          return new Left([state, e]);
+        }
+      }
       case "AndThen": {
         const r1 = await this._interpret(bulkRequests, state, kioa.self);
         return (async () => {

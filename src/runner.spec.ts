@@ -53,6 +53,14 @@ describe("KIORunnerImpl", () => {
           .run(runner);
         expect(result).toStrictEqual(new Left("error"));
       });
+      it("Async", async () => {
+        const success = await KIO.async(async () => 1).run(runner);
+        expect(success).toStrictEqual(new Right(1));
+        const failure = await KIO.async<never, string>(async () => {
+          throw "error";
+        }).run(runner);
+        expect(failure).toStrictEqual(new Left("error"));
+      });
       it("AndThen", async () => {
         const success = await KIO.succeed(1)
           .andThen((a) => KIO.succeed(a + 1))
