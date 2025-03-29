@@ -42,6 +42,10 @@ export class KIO<S extends object, E, A> {
     return new KIO({ kind: "Fail", error: e });
   }
 
+  static async<A, E = unknown>(f: () => Promise<A>): KIO<object, E, A> {
+    return new KIO({ kind: "Async", f });
+  }
+
   fold<S1 extends object, E1, B>(
     success: (a: A, s: S) => KIO<S1, E1, B>,
     failure: (e: E, s: S) => KIO<S1, E1, B>,
@@ -198,6 +202,10 @@ export type KIOA<E, A> =
     }
   | { kind: "Succeed"; value: A }
   | { kind: "Fail"; error: E }
+  | {
+      kind: "Async";
+      f: () => Promise<A>;
+    }
   | {
       kind: "Fold";
       self: KIOA<unknown, unknown>;
