@@ -11,10 +11,8 @@ import {
   UpdateRecordsRequest,
 } from "./client.ts";
 import {
-  KData,
   KFields,
   KIdField,
-  KNothing,
   KRecord,
   KRecordList,
   KRevisionField,
@@ -22,9 +20,7 @@ import {
 import { KintoneRestAPIClient } from "@kintone/rest-api-client";
 
 export interface KIORunner {
-  run<E, A, D extends KData<A>>(
-    kioa: KIOA<E, A, D>,
-  ): Promise<Either<E, D["value"]>>;
+  run<E, A>(kioa: KIOA<E, A>): Promise<Either<E, A>>;
 }
 
 export class KIORunnerImpl implements KIORunner {
@@ -34,15 +30,15 @@ export class KIORunnerImpl implements KIORunner {
     this.client = client;
   }
 
-  private async _interpret<S extends object, E, A, D extends KData<A>>(
+  private async _interpret<S extends object, E, A>(
     bulkRequests: BulkRequest[],
     state: S,
-    kioa: KIOA<E, A, D>,
-  ): Promise<Either<[S, E], [BulkRequest[], S, D]>> {
+    kioa: KIOA<E, A>,
+  ): Promise<Either<[S, E], [BulkRequest[], S, A]>> {
     switch (kioa.kind) {
       case "Succeed": {
         return Promise.resolve(
-          new Right([bulkRequests, state, kioa.value] as [BulkRequest[], S, D]),
+          new Right([bulkRequests, state, kioa.value] as [BulkRequest[], S, A]),
         );
       }
       case "Fail": {
@@ -68,7 +64,7 @@ export class KIORunnerImpl implements KIORunner {
                     return new Right([bulkRequests2, s2, a2] as [
                       BulkRequest[],
                       S,
-                      D,
+                      A,
                     ]);
                   }
                 }
@@ -110,7 +106,7 @@ export class KIORunnerImpl implements KIORunner {
               return new Right([bulkRequests, state, kRecord] as [
                 BulkRequest[],
                 S,
-                D,
+                A,
               ]);
             }
           }
@@ -150,7 +146,7 @@ export class KIORunnerImpl implements KIORunner {
               return new Right([bulkRequests, state, kRecordList] as [
                 BulkRequest[],
                 S,
-                D,
+                A,
               ]);
             }
           }
@@ -169,8 +165,8 @@ export class KIORunnerImpl implements KIORunner {
         return new Right([
           [...bulkRequests, addRecordRequest],
           state,
-          new KNothing(),
-        ] as [BulkRequest[], S, D]);
+          undefined,
+        ] as [BulkRequest[], S, A]);
       }
       case "AddRecords": {
         const { records } = kioa;
@@ -185,8 +181,8 @@ export class KIORunnerImpl implements KIORunner {
         return new Right([
           [...bulkRequests, addRecordsRequest],
           state,
-          new KNothing(),
-        ] as [BulkRequest[], S, D]);
+          undefined,
+        ] as [BulkRequest[], S, A]);
       }
       case "UpdateRecord": {
         const { record } = kioa;
@@ -212,7 +208,7 @@ export class KIORunnerImpl implements KIORunner {
             record.id,
             Number(record.revision) + 1,
           ),
-        ] as [BulkRequest[], S, D]);
+        ] as [BulkRequest[], S, A]);
       }
       case "UpdateRecords": {
         const { records } = kioa;
@@ -248,7 +244,7 @@ export class KIORunnerImpl implements KIORunner {
               );
             }),
           ),
-        ] as [BulkRequest[], S, D]);
+        ] as [BulkRequest[], S, A]);
       }
       case "DeleteRecord": {
         const { record } = kioa;
@@ -264,8 +260,8 @@ export class KIORunnerImpl implements KIORunner {
         return new Right([
           [...bulkRequests, deleteRecordRequest],
           state,
-          new KNothing(),
-        ] as [BulkRequest[], S, D]);
+          undefined,
+        ] as [BulkRequest[], S, A]);
       }
       case "DeleteRecords": {
         const { records } = kioa;
@@ -281,8 +277,8 @@ export class KIORunnerImpl implements KIORunner {
         return new Right([
           [...bulkRequests, deleteRecordsRequest],
           state,
-          new KNothing(),
-        ] as [BulkRequest[], S, D]);
+          undefined,
+        ] as [BulkRequest[], S, A]);
       }
       case "Commit": {
         if (bulkRequests.length > 0) {
@@ -295,19 +291,19 @@ export class KIORunnerImpl implements KIORunner {
                 return new Left([state, result.value] as [S, E]);
               }
               case "Right": {
-                return new Right([
-                  Array<BulkRequest>(),
-                  state,
-                  new KNothing(),
-                ] as [BulkRequest[], S, D]);
+                return new Right([Array<BulkRequest>(), state, undefined] as [
+                  BulkRequest[],
+                  S,
+                  A,
+                ]);
               }
             }
           })();
         } else {
-          return new Right([Array<BulkRequest>(), state, new KNothing()] as [
+          return new Right([Array<BulkRequest>(), state, undefined] as [
             BulkRequest[],
             S,
-            D,
+            A,
           ]);
         }
       }
@@ -331,9 +327,7 @@ export class KIORunnerImpl implements KIORunner {
     );
   }
 
-  async run<E, A, D extends KData<A>>(
-    kioa: KIOA<E, A, D>,
-  ): Promise<Either<E, D["value"]>> {
+  async run<E, A>(kioa: KIOA<E, A>): Promise<Either<E, A>> {
     const result = await this._interpret([], {}, kioa);
     switch (result.kind) {
       case "Left": {
@@ -342,7 +336,7 @@ export class KIORunnerImpl implements KIORunner {
       }
       case "Right": {
         const [, , a] = result.value;
-        return new Right(a.value);
+        return new Right(a);
       }
     }
   }

@@ -8,14 +8,7 @@ import {
   GetRecordsResponse,
   KintoneClient,
 } from "./client.ts";
-import {
-  KError,
-  KFields,
-  KNothing,
-  KRecord,
-  KRecordList,
-  KValue,
-} from "./data.ts";
+import { KError, KFields, KRecord, KRecordList } from "./data.ts";
 import { KintoneRestAPIClient } from "@kintone/rest-api-client";
 import { ArrayElm, KVPairs } from "./helper.ts";
 import SavedFields = kintone.types.SavedFields;
@@ -62,14 +55,14 @@ describe("KIORunnerImpl", () => {
       });
       it("FlatMap", async () => {
         const success = await KIO.succeed(1)
-          .flatMap((a) => KIO.succeed(a.value + 1))
-          .flatMap("flatMap", (a) => KIO.succeed(a.value + 1))
-          .map((a) => a.update((value) => value + 1))
-          .map("map", (a) => a.update((value) => value + 1))
+          .flatMap((a) => KIO.succeed(a + 1))
+          .flatMap("flatMap", (a) => KIO.succeed(a + 1))
+          .map((a) => a + 1)
+          .map("map", (a) => a + 1)
           .map((a, s) => {
             expect(s).toStrictEqual({
-              flatMap: new KValue(3),
-              map: new KValue(5),
+              flatMap: 3,
+              map: 5,
             });
             return a;
           })
@@ -92,14 +85,14 @@ describe("KIORunnerImpl", () => {
             },
             (e, s) => {
               expect(e).toBe("error");
-              expect(s).toStrictEqual({ value: new KValue(1) });
+              expect(s).toStrictEqual({ value: 1 });
               return KIO.succeed(2);
             },
           )
           .fold(
             (a, s) => {
-              expect(a).toStrictEqual(new KValue(2));
-              expect(s).toStrictEqual({ value: new KValue(1) });
+              expect(a).toStrictEqual(2);
+              expect(s).toStrictEqual({ value: 1 });
               return KIO.succeed(undefined);
             },
             () => {
@@ -152,21 +145,21 @@ describe("KIORunnerImpl", () => {
             id,
           });
           // When
-          const result = await KIO.getRecord<typeof expectedRecord>({ app, id })
-            .map((a) => {
-              expect(a).toStrictEqual(
-                new KRecord(
-                  expectedRecord,
-                  app,
-                  expectedRecord.$id.value,
-                  expectedRecord.$revision.value,
-                ),
-              );
-              return a;
-            })
-            .run(runner);
+          const result = await KIO.getRecord<typeof expectedRecord>({
+            app,
+            id,
+          }).run(runner);
           // Then
-          expect(result).toStrictEqual(new Right(expectedRecord));
+          expect(result).toStrictEqual(
+            new Right(
+              new KRecord(
+                expectedRecord,
+                app,
+                expectedRecord.$id.value,
+                expectedRecord.$revision.value,
+              ),
+            ),
+          );
         });
         it("should fail to get a record", async () => {
           cleanUp();
@@ -210,27 +203,24 @@ describe("KIORunnerImpl", () => {
               fields: ["text"],
               query: `$id = ${id}`,
             },
-          )
-            .map((a) => {
-              expect(a).toStrictEqual(
-                new KRecordList(
-                  app,
-                  expectedRecords.map(
-                    (expectedRecord) =>
-                      new KRecord(
-                        expectedRecord,
-                        app,
-                        expectedRecord.$id.value,
-                        expectedRecord.$revision.value,
-                      ),
-                  ),
-                ),
-              );
-              return a;
-            })
-            .run(runner);
+          ).run(runner);
           // Then
-          expect(result).toStrictEqual(new Right(expectedRecords));
+          expect(result).toStrictEqual(
+            new Right(
+              new KRecordList(
+                app,
+                expectedRecords.map(
+                  (expectedRecord) =>
+                    new KRecord(
+                      expectedRecord,
+                      app,
+                      expectedRecord.$id.value,
+                      expectedRecord.$revision.value,
+                    ),
+                ),
+              ),
+            ),
+          );
         });
         it("should fail to get records", async () => {
           cleanUp();
@@ -481,7 +471,7 @@ describe("KIORunnerImpl", () => {
             .flatMap("newRecord", (a) =>
               KIO.addRecord({
                 app,
-                record: a.value,
+                record: a,
               }),
             )
             .flatMap(() => KIO.commit())
@@ -503,7 +493,6 @@ describe("KIORunnerImpl", () => {
             .flatMap("savepoint2", () => KIO.getRecords({ app }))
             .map((_a, s) => {
               expect(s.savepoint2.records).toHaveLength(0);
-              return new KNothing();
             })
             .run(runner);
           // Then
@@ -516,7 +505,7 @@ describe("KIORunnerImpl", () => {
             .flatMap((a) =>
               KIO.addRecord({
                 app,
-                record: a.value,
+                record: a,
               }),
             )
             .flatMap(() => KIO.commit())
