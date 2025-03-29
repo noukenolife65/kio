@@ -53,15 +53,15 @@ describe("KIORunnerImpl", () => {
           .run(runner);
         expect(result).toStrictEqual(new Left("error"));
       });
-      it("FlatMap", async () => {
+      it("AndThen", async () => {
         const success = await KIO.succeed(1)
-          .flatMap((a) => KIO.succeed(a + 1))
-          .flatMap("flatMap", (a) => KIO.succeed(a + 1))
+          .andThen((a) => KIO.succeed(a + 1))
+          .andThen("andThen", (a) => KIO.succeed(a + 1))
           .map((a) => a + 1)
           .map("map", (a) => a + 1)
           .map((a, s) => {
             expect(s).toStrictEqual({
-              flatMap: 3,
+              andThen: 3,
               map: 5,
             });
             return a;
@@ -70,15 +70,15 @@ describe("KIORunnerImpl", () => {
         expect(success).toStrictEqual(new Right(5));
 
         const failure = await KIO.succeed(1)
-          .flatMap(() => KIO.fail("error"))
-          .flatMap(() => KIO.succeed(1))
+          .andThen(() => KIO.fail("error"))
+          .andThen(() => KIO.succeed(1))
           .run(runner);
         expect(failure).toStrictEqual(new Left("error"));
       });
       it("Fold", async () => {
         await KIO.start()
-          .flatMap("value", () => KIO.succeed(1))
-          .flatMap(() => KIO.fail("error"))
+          .andThen("value", () => KIO.succeed(1))
+          .andThen(() => KIO.fail("error"))
           .fold(
             () => {
               expect.fail("should not be called");
@@ -249,7 +249,7 @@ describe("KIORunnerImpl", () => {
           };
           // When
           const result = await KIO.addRecord({ app, record })
-            .flatMap(() => KIO.commit())
+            .andThen(() => KIO.commit())
             .run(runner);
           // Then
           const savedRecords = await kClient.record.getAllRecords<
@@ -267,7 +267,7 @@ describe("KIORunnerImpl", () => {
             app,
             record: { invalidField: { value: "" } },
           })
-            .flatMap(() => KIO.commit())
+            .andThen(() => KIO.commit())
             .run(runner);
           // Then
           expect(result).toStrictEqual(
@@ -289,7 +289,7 @@ describe("KIORunnerImpl", () => {
           ];
           // When
           const result = await KIO.addRecords({ app, records })
-            .flatMap(() => KIO.commit())
+            .andThen(() => KIO.commit())
             .run(runner);
           // Then
           const savedRecords = await kClient.record.getAllRecords<
@@ -307,7 +307,7 @@ describe("KIORunnerImpl", () => {
             app,
             records: [{ invalidField: { value: "" } }],
           })
-            .flatMap(() => KIO.commit())
+            .andThen(() => KIO.commit())
             .run(runner);
           // Then
           expect(result).toStrictEqual(
@@ -339,7 +339,7 @@ describe("KIORunnerImpl", () => {
           app,
           id: savedRecord.$id.value,
         })
-          .flatMap((a) =>
+          .andThen((a) =>
             KIO.updateRecord({
               record: a.update((value) => ({
                 ...value,
@@ -347,7 +347,7 @@ describe("KIORunnerImpl", () => {
               })),
             }),
           )
-          .flatMap(() => KIO.commit())
+          .andThen(() => KIO.commit())
           .run(runner);
         // Then
         const { record: updatedRecord } = await kClient.record.getRecord({
@@ -382,7 +382,7 @@ describe("KIORunnerImpl", () => {
         const result = await KIO.getRecords<KVPairs<Fields>>({
           app,
         })
-          .flatMap((a) =>
+          .andThen((a) =>
             KIO.updateRecords({
               records: a.update((value) => ({
                 ...value,
@@ -390,7 +390,7 @@ describe("KIORunnerImpl", () => {
               })),
             }),
           )
-          .flatMap(() => KIO.commit())
+          .andThen(() => KIO.commit())
           .run(runner);
         // Then
         const updatedRecords = await kClient.record.getRecords({
@@ -424,8 +424,8 @@ describe("KIORunnerImpl", () => {
           app,
           id: savedRecord.$id.value,
         })
-          .flatMap((record) => KIO.deleteRecord({ record }))
-          .flatMap(() => KIO.commit())
+          .andThen((record) => KIO.deleteRecord({ record }))
+          .andThen(() => KIO.commit())
           .run(runner);
         // Then
         const { records: noRecords } = await kClient.record.getRecords<
@@ -451,8 +451,8 @@ describe("KIORunnerImpl", () => {
         const result = await KIO.getRecords<KVPairs<Fields>>({
           app,
         })
-          .flatMap((a) => KIO.deleteRecords({ records: a }))
-          .flatMap(() => KIO.commit())
+          .andThen((a) => KIO.deleteRecords({ records: a }))
+          .andThen(() => KIO.commit())
           .run(runner);
         // Then
         const { records: noRecords } = await kClient.record.getRecords<
@@ -468,29 +468,29 @@ describe("KIORunnerImpl", () => {
           cleanUp();
           // When
           const result = await KIO.succeed({ text: { value: "test" } })
-            .flatMap("newRecord", (a) =>
+            .andThen("newRecord", (a) =>
               KIO.addRecord({
                 app,
                 record: a,
               }),
             )
-            .flatMap(() => KIO.commit())
-            .flatMap("savepoint1", () => KIO.getRecords({ app }))
+            .andThen(() => KIO.commit())
+            .andThen("savepoint1", () => KIO.getRecords({ app }))
             .map((a) => {
               return a.update((record) => ({
                 ...record,
                 text: { value: "updated" },
               }));
             })
-            .flatMap((a) => {
+            .andThen((a) => {
               return KIO.updateRecord({ record: a.records[0] });
             })
-            // .flatMap(() => KIO.commit())
-            .flatMap((record) => {
+            // .andThen(() => KIO.commit())
+            .andThen((record) => {
               return KIO.deleteRecord({ record });
             })
-            .flatMap(() => KIO.commit())
-            .flatMap("savepoint2", () => KIO.getRecords({ app }))
+            .andThen(() => KIO.commit())
+            .andThen("savepoint2", () => KIO.getRecords({ app }))
             .map((_a, s) => {
               expect(s.savepoint2.records).toHaveLength(0);
             })
@@ -502,21 +502,21 @@ describe("KIORunnerImpl", () => {
           cleanUp();
           // When
           await KIO.succeed({ text: { value: "test" } })
-            .flatMap((a) =>
+            .andThen((a) =>
               KIO.addRecord({
                 app,
                 record: a,
               }),
             )
-            .flatMap(() => KIO.commit())
-            .flatMap("savepoint1", () => KIO.getRecords({ app }))
-            .flatMap((_, s) =>
+            .andThen(() => KIO.commit())
+            .andThen("savepoint1", () => KIO.getRecords({ app }))
+            .andThen((_, s) =>
               KIO.deleteRecord({ record: s.savepoint1.records[0] }),
             )
-            .flatMap((_, s) =>
+            .andThen((_, s) =>
               KIO.updateRecord({ record: s.savepoint1.records[0] }),
             )
-            .flatMap(() => KIO.commit())
+            .andThen(() => KIO.commit())
             .run(runner);
           // Then
           const { records } = await kClient.record.getRecords({ app });
