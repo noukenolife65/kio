@@ -2,14 +2,14 @@ import {
   KintoneRestAPIClient,
   KintoneRestAPIError,
 } from "@kintone/rest-api-client";
-import { KError, KFields, KIdField, KRevisionField } from "./data.ts";
+import { KError, _KFields, KIdField, KRevisionField } from "./data.ts";
 import { Either, Left, Right } from "./either.ts";
 
 export type GetRecordParams = {
   app: string | number;
   id: string | number;
 };
-export type GetRecordResponseRecord = KFields & KIdField & KRevisionField;
+export type GetRecordResponseRecord = _KFields & KIdField & KRevisionField;
 export type GetRecordResponse = {
   record: GetRecordResponseRecord;
 };
@@ -19,7 +19,7 @@ export type GetRecordsParams = {
   query?: string;
   totalCount?: boolean;
 };
-export type GetRecordsResponse<R extends KFields> = {
+export type GetRecordsResponse<R extends _KFields> = {
   records: R[];
 };
 export type AddRecordRequest = {
@@ -27,7 +27,7 @@ export type AddRecordRequest = {
   api: "/k/v1/record.json";
   payload: {
     app: string | number;
-    record: KFields;
+    record: _KFields;
   };
 };
 export type AddRecordsRequest = {
@@ -35,7 +35,7 @@ export type AddRecordsRequest = {
   api: "/k/v1/records.json";
   payload: {
     app: string | number;
-    records: KFields[];
+    records: _KFields[];
   };
 };
 export type UpdateRecordRequest = {
@@ -44,7 +44,7 @@ export type UpdateRecordRequest = {
   payload: {
     app: string | number;
     id: string | number;
-    record: KFields;
+    record: _KFields;
     revision?: string | number;
   };
 };
@@ -55,7 +55,7 @@ export type UpdateRecordsRequest = {
     app: string | number;
     records: {
       id: string | number;
-      record: KFields;
+      record: _KFields;
       revision?: string | number;
     }[];
   };
@@ -84,7 +84,7 @@ export interface KintoneClient {
   getRecord(
     params: GetRecordParams,
   ): Promise<Either<KError, GetRecordResponse>>;
-  getRecords<R extends KFields>(
+  getRecords<R extends _KFields>(
     params: GetRecordsParams,
   ): Promise<Either<KError, GetRecordsResponse<R>>>;
   bulkRequest(
@@ -118,7 +118,7 @@ export class KintoneClientImpl implements KintoneClient {
     }
   }
 
-  async getRecords<R extends KFields>(
+  async getRecords<R extends _KFields>(
     params: GetRecordsParams,
   ): Promise<Either<KError, GetRecordsResponse<R>>> {
     try {

@@ -11,7 +11,7 @@ import {
   UpdateRecordsRequest,
 } from "./client.ts";
 import {
-  KFields,
+  _KFields,
   KIdField,
   KRecord,
   KRecordList,
@@ -296,7 +296,7 @@ export class KIORunnerImpl implements KIORunner {
     }
   }
 
-  private removeProhibitedFieldsForUpdate(record: KFields) {
+  private removeProhibitedFieldsForUpdate(record: _KFields) {
     return Object.fromEntries(
       Object.entries(record).filter(([, { type }]) => {
         return (
