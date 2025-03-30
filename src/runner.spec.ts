@@ -8,9 +8,9 @@ import {
   GetRecordsResponse,
   KintoneClient,
 } from "./client.ts";
-import { KError, KFields, KRecord, KRecordList } from "./data.ts";
+import { _KFields, KError, KRecord, KRecordList } from "./data.ts";
 import { KintoneRestAPIClient } from "@kintone/rest-api-client";
-import { ArrayElm, KVPairs } from "./helper.ts";
+import { KVPairs } from "./helper.ts";
 import SavedFields = kintone.types.SavedFields;
 import Fields = kintone.types.Fields;
 
@@ -27,7 +27,7 @@ describe("KIORunnerImpl", () => {
             },
           });
         }
-        async getRecords<R extends KFields>(): Promise<
+        async getRecords<R extends _KFields>(): Promise<
           Either<KError, GetRecordsResponse<R>>
         > {
           return new Right([
@@ -153,7 +153,7 @@ describe("KIORunnerImpl", () => {
             id,
           });
           // When
-          const result = await KIO.getRecord<typeof expectedRecord>({
+          const result = await KIO.getRecord<SavedFields>({
             app,
             id,
           }).run(runner);
@@ -205,13 +205,11 @@ describe("KIORunnerImpl", () => {
             query: `$id = ${id}`,
           });
           // When
-          const result = await KIO.getRecords<ArrayElm<typeof expectedRecords>>(
-            {
-              app,
-              fields: ["text"],
-              query: `$id = ${id}`,
-            },
-          ).run(runner);
+          const result = await KIO.getRecords<SavedFields>({
+            app,
+            fields: ["text"],
+            query: `$id = ${id}`,
+          }).run(runner);
           // Then
           expect(result).toStrictEqual(
             new Right(
@@ -343,7 +341,7 @@ describe("KIORunnerImpl", () => {
           app,
         });
         // When
-        const result = await KIO.getRecord<KVPairs<Fields>>({
+        const result = await KIO.getRecord<Fields>({
           app,
           id: savedRecord.$id.value,
         })
@@ -387,7 +385,7 @@ describe("KIORunnerImpl", () => {
           app,
         });
         // When
-        const result = await KIO.getRecords<KVPairs<Fields>>({
+        const result = await KIO.getRecords<Fields>({
           app,
         })
           .andThen((a) =>
@@ -428,7 +426,7 @@ describe("KIORunnerImpl", () => {
           app,
         });
         // When
-        const result = await KIO.getRecord<KVPairs<Fields>>({
+        const result = await KIO.getRecord<Fields>({
           app,
           id: savedRecord.$id.value,
         })
@@ -456,7 +454,7 @@ describe("KIORunnerImpl", () => {
           records,
         });
         // When
-        const result = await KIO.getRecords<KVPairs<Fields>>({
+        const result = await KIO.getRecords<Fields>({
           app,
         })
           .andThen((a) => KIO.deleteRecords({ records: a }))

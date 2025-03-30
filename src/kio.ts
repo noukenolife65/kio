@@ -2,6 +2,7 @@ import { KIORunner } from "./runner.ts";
 import { Either } from "./either.ts";
 import {
   KError,
+  _KFields,
   KFields,
   KNewRecord,
   KNewRecordList,
@@ -109,19 +110,19 @@ export class KIO<S extends object, E, A> {
     }
   }
 
-  static getRecord<R extends KFields>(
+  static getRecord<R extends KFields<R>>(
     args: GetRecordArgs,
   ): KIO<object, KError, KRecord<R>> {
     return new KIO({ kind: "GetRecord", ...args });
   }
 
-  static getRecords<R extends KFields>(
+  static getRecords<R extends KFields<R>>(
     args: GetRecordsArgs,
   ): KIO<object, KError, KRecordList<R>> {
     return new KIO({ kind: "GetRecords", ...args });
   }
 
-  static addRecord<R extends KFields>(args: {
+  static addRecord<R extends KFields<R>>(args: {
     app: number | string;
     record: R;
   }): KIO<object, never, void> {
@@ -133,7 +134,7 @@ export class KIO<S extends object, E, A> {
     });
   }
 
-  static addRecords<R extends KFields>(args: {
+  static addRecords<R extends KFields<R>>(args: {
     app: number | string;
     records: R[];
   }): KIO<object, never, void> {
@@ -148,7 +149,7 @@ export class KIO<S extends object, E, A> {
     });
   }
 
-  static updateRecord<R extends KFields>(args: {
+  static updateRecord<R extends KFields<R>>(args: {
     record: KRecord<R>;
   }): KIO<object, never, KRecord<R>> {
     return new KIO({
@@ -157,7 +158,7 @@ export class KIO<S extends object, E, A> {
     });
   }
 
-  static updateRecords<R extends KFields>(args: {
+  static updateRecords<R extends KFields<R>>(args: {
     records: KRecordList<R>;
   }): KIO<object, never, KRecordList<R>> {
     return new KIO({
@@ -166,7 +167,7 @@ export class KIO<S extends object, E, A> {
     });
   }
 
-  static deleteRecord<R extends KFields>(args: {
+  static deleteRecord<R extends KFields<R>>(args: {
     record: KRecord<R>;
   }): KIO<object, never, void> {
     return new KIO({
@@ -175,7 +176,7 @@ export class KIO<S extends object, E, A> {
     });
   }
 
-  static deleteRecords<R extends KFields>(args: {
+  static deleteRecords<R extends KFields<R>>(args: {
     records: KRecordList<R>;
   }): KIO<object, never, void> {
     return new KIO({
@@ -225,27 +226,27 @@ export type KIOA<E, A> =
     }
   | {
       kind: "AddRecord";
-      record: KNewRecord<KFields>;
+      record: KNewRecord<_KFields>;
     }
   | {
       kind: "AddRecords";
-      records: KNewRecordList<KFields>;
+      records: KNewRecordList<_KFields>;
     }
   | {
       kind: "UpdateRecord";
-      record: KRecord<KFields>;
+      record: KRecord<_KFields>;
     }
   | {
       kind: "UpdateRecords";
-      records: KRecordList<KFields>;
+      records: KRecordList<_KFields>;
     }
   | {
       kind: "DeleteRecord";
-      record: KRecord<KFields>;
+      record: KRecord<_KFields>;
     }
   | {
       kind: "DeleteRecords";
-      records: KRecordList<KFields>;
+      records: KRecordList<_KFields>;
     }
   | {
       kind: "Commit";

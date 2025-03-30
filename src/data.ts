@@ -1,4 +1,12 @@
-export type KFields = {
+export type KFields<T> = {
+  [K in keyof T]: T[K] extends {
+    type?: string;
+    value: unknown;
+  }
+    ? T[K]
+    : never;
+};
+export type _KFields = {
   [k: string]: {
     type?: string;
     value: unknown;
