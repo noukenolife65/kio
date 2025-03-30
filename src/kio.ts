@@ -1,14 +1,15 @@
 import { KIORunner } from "./runner.ts";
 import { Either } from "./either.ts";
 import {
-  KError,
   _KFields,
+  KError,
   KFields,
   KNewRecord,
   KNewRecordList,
   KRecord,
   KRecordList,
 } from "./data.ts";
+import { RetryPolicy } from "./retry/policy.ts";
 
 export type KIOS<T extends string, A> = {
   readonly [K in T]: A;
@@ -108,6 +109,10 @@ export class KIO<S extends object, E, A> {
     } else {
       throw new Error("Invalid arguments");
     }
+  }
+
+  retry(policy: RetryPolicy): KIO<S, E, A> {
+    return new KIO({ kind: "Retry", self: this.kioa, policy });
   }
 
   static getRecord<R extends KFields<R>>(
@@ -212,6 +217,11 @@ export type KIOA<E, A> =
       self: KIOA<unknown, unknown>;
       success: (a: unknown, s: unknown) => KIOA<E, A>;
       failure: (e: unknown, s: unknown) => KIOA<E, A>;
+    }
+  | {
+      kind: "Retry";
+      self: KIOA<unknown, unknown>;
+      policy: RetryPolicy;
     }
   | {
       kind: "GetRecord";

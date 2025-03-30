@@ -90,6 +90,25 @@ export class KIORunnerImpl implements KIORunner {
           }
         })();
       }
+      case "Retry": {
+        const { policy, self } = kioa;
+        return (async () => {
+          switch (policy.kind) {
+            case "Recurs": {
+              let i = 0;
+              let result: Either<
+                [object, unknown],
+                [BulkRequest[], object, unknown]
+              >;
+              do {
+                result = await this._interpret(bulkRequests, state, self);
+                i++;
+              } while (result.kind === "Left" && i <= policy.times);
+              return result;
+            }
+          }
+        })();
+      }
       case "GetRecord": {
         const response = await this.client.getRecord({
           app: kioa.app,
