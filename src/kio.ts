@@ -48,16 +48,20 @@ export class KIO<S extends object, E, A> {
     return new KIO({ kind: "Async", f });
   }
 
-  fold<S1 extends object, E1, B>(
-    success: (a: A, s: S) => KIO<S1, E1, B>,
-    failure: (e: E, s: S) => KIO<S1, E1, B>,
-  ): KIO<S1, E | E1, B> {
+  fold<E1, B>(
+    success: (a: A, s: S) => KIO<object, E1, B>,
+    failure: (e: E, s: S) => KIO<object, E1, B>,
+  ): KIO<S, E | E1, B> {
     return new KIO({
       kind: "Fold",
       self: this.kioa,
       success: (a, s) => success(a as A, s as S).kioa,
       failure: (e, s) => failure(e as E, s as S).kioa,
     });
+  }
+
+  catch<E1>(f: (e: E, s: S) => KIO<object, E1, A>): KIO<S, E | E1, A> {
+    return this.fold<E1, A>((a) => KIO.succeed(a), f);
   }
 
   andThen<S1 extends object, E1, B>(
@@ -112,7 +116,17 @@ export class KIO<S extends object, E, A> {
   }
 
   retry(policy: RetryPolicy): KIO<S, E, A> {
-    return new KIO({ kind: "Retry", self: this.kioa, policy });
+    return (() => {
+      switch (policy.kind) {
+        case "Recurs": {
+          const { times } = policy;
+          const loop = (n: number): KIO<S, E, A> => {
+            return this.catch((e) => (n < 0 ? KIO.fail(e) : loop(n - 1)));
+          };
+          return loop(times);
+        }
+      }
+    })();
   }
 
   static getRecord<R extends KFields<R>>(
@@ -217,11 +231,6 @@ export type KIOA<E, A> =
       self: KIOA<unknown, unknown>;
       success: (a: unknown, s: unknown) => KIOA<E, A>;
       failure: (e: unknown, s: unknown) => KIOA<E, A>;
-    }
-  | {
-      kind: "Retry";
-      self: KIOA<unknown, unknown>;
-      policy: RetryPolicy;
     }
   | {
       kind: "GetRecord";
