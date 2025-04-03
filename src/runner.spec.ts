@@ -118,6 +118,12 @@ describe("KIORunnerImpl", () => {
           .run(runner);
         expect(result).toStrictEqual(new Right(3));
       });
+      it("Catch", async () => {
+        const result = await KIO.fail("error")
+          .catch(() => KIO.succeed(1))
+          .run(runner);
+        expect(result).toStrictEqual(new Right(1));
+      });
     });
     describe("Kintone Operations", () => {
       const app = 1;
