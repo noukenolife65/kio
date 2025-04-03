@@ -121,7 +121,7 @@ export class KIO<S extends object, E, A> {
         case "Recurs": {
           const { times } = policy;
           const loop = (n: number): KIO<S, E, A> => {
-            return this.catch((e) => (n < 0 ? KIO.fail(e) : loop(n - 1)));
+            return this.catch((e) => (n === 0 ? KIO.fail(e) : loop(n - 1)));
           };
           return loop(times);
         }

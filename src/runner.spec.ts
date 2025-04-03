@@ -113,8 +113,9 @@ describe("KIORunnerImpl", () => {
         let i = 0;
         const result = await KIO.start()
           .andThen(() => KIO.succeed(i++))
-          .andThen(() => (i === 3 ? KIO.succeed(i) : KIO.fail("error")))
+          .andThen(() => KIO.fail("error"))
           .retry({ kind: "Recurs", times: 2 })
+          .catch(() => KIO.succeed(i))
           .run(runner);
         expect(result).toStrictEqual(new Right(3));
       });
