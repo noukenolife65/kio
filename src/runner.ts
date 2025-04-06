@@ -10,13 +10,7 @@ import {
   UpdateRecordRequest,
   UpdateRecordsRequest,
 } from "./client.ts";
-import {
-  _KFields,
-  KIdField,
-  KRecord,
-  KRecordList,
-  KRevisionField,
-} from "./data.ts";
+import { _KFields, KIdField, KRecord, KRevisionField } from "./data.ts";
 import { KintoneRestAPIClient } from "@kintone/rest-api-client";
 
 export interface KIORunner {
@@ -129,17 +123,14 @@ export class KIORunnerImpl implements KIORunner {
             }
             case "Right": {
               const { records } = response.value;
-              const kRecordList = new KRecordList(
-                app,
-                records.map(
-                  (record) =>
-                    new KRecord(
-                      record,
-                      app,
-                      record.$id.value,
-                      record.$revision.value,
-                    ),
-                ),
+              const kRecordList = records.map(
+                (record) =>
+                  new KRecord(
+                    record,
+                    app,
+                    record.$id.value,
+                    record.$revision.value,
+                  ),
               );
               return new Right([bulkRequests, state, kRecordList]);
             }
@@ -164,12 +155,18 @@ export class KIORunnerImpl implements KIORunner {
       }
       case "AddRecords": {
         const { records } = kioa;
+        const [head] = records;
+        if (head === undefined) {
+          throw new Error(
+            "No records provided for the add records operation. Please specify at least one record.",
+          );
+        }
         const addRecordsRequest: AddRecordsRequest = {
           method: "POST",
           api: "/k/v1/records.json",
           payload: {
-            app: records.app,
-            records: records.value,
+            app: head.app,
+            records: records.map((record) => record.value),
           },
         };
         return new Right([
@@ -206,7 +203,13 @@ export class KIORunnerImpl implements KIORunner {
       }
       case "UpdateRecords": {
         const { records } = kioa;
-        const updatingRecords = records.records.map((record) => {
+        const [head] = records;
+        if (head === undefined) {
+          throw new Error(
+            "No records provided for the update records operation. Please specify at least one record.",
+          );
+        }
+        const updatingRecords = records.map((record) => {
           const updatingRecord = this.removeProhibitedFieldsForUpdate(
             record.value,
           );
@@ -220,24 +223,21 @@ export class KIORunnerImpl implements KIORunner {
           method: "PUT",
           api: "/k/v1/records.json",
           payload: {
-            app: records.app,
+            app: head.app,
             records: updatingRecords,
           },
         };
         return new Right([
           [...bulkRequests, updateRecordsRequest],
           state,
-          new KRecordList(
-            records.app,
-            records.records.map((record) => {
-              return new KRecord(
-                record.value,
-                records.app,
-                record.id,
-                Number(record.revision) + 1,
-              );
-            }),
-          ),
+          records.map((record) => {
+            return new KRecord(
+              record.value,
+              record.app,
+              record.id,
+              Number(record.revision) + 1,
+            );
+          }),
         ]);
       }
       case "DeleteRecord": {
@@ -259,13 +259,19 @@ export class KIORunnerImpl implements KIORunner {
       }
       case "DeleteRecords": {
         const { records } = kioa;
+        const [head] = records;
+        if (head === undefined) {
+          throw new Error(
+            "No records provided for the delete records operation. Please specify at least one record.",
+          );
+        }
         const deleteRecordsRequest: DeleteRecordsRequest = {
           method: "DELETE",
           api: "/k/v1/records.json",
           payload: {
-            app: records.app,
-            ids: records.records.map((record) => record.id),
-            revisions: records.records.map((record) => record.revision ?? -1),
+            app: head.app,
+            ids: records.map((record) => record.id),
+            revisions: records.map((record) => record.revision ?? -1),
           },
         };
         return new Right([
