@@ -1,14 +1,6 @@
 import { KIORunner } from "./runner.ts";
 import { Either } from "./either.ts";
-import {
-  _KFields,
-  KError,
-  KFields,
-  KNewRecord,
-  KNewRecordList,
-  KRecord,
-  KRecordList,
-} from "./data.ts";
+import { _KFields, KError, KFields, KNewRecord, KRecord } from "./data.ts";
 import { RetryPolicy } from "./retry/policy.ts";
 
 export type KIOS<T extends string, A> = {
@@ -137,7 +129,7 @@ export class KIO<S extends object, E, A> {
 
   static getRecords<R extends KFields<R>>(
     args: GetRecordsArgs,
-  ): KIO<object, KError, KRecordList<R>> {
+  ): KIO<object, KError, KRecord<R>[]> {
     return new KIO({ kind: "GetRecords", ...args });
   }
 
@@ -158,10 +150,7 @@ export class KIO<S extends object, E, A> {
     records: R[];
   }): KIO<object, never, void> {
     const { app, records } = args;
-    const kNewRecords = new KNewRecordList(
-      app,
-      records.map((record) => new KNewRecord(record, app)),
-    );
+    const kNewRecords = records.map((record) => new KNewRecord(record, app));
     return new KIO({
       kind: "AddRecords",
       records: kNewRecords,
@@ -178,8 +167,8 @@ export class KIO<S extends object, E, A> {
   }
 
   static updateRecords<R extends KFields<R>>(args: {
-    records: KRecordList<R>;
-  }): KIO<object, never, KRecordList<R>> {
+    records: KRecord<R>[];
+  }): KIO<object, never, KRecord<R>[]> {
     return new KIO({
       kind: "UpdateRecords",
       ...args,
@@ -196,7 +185,7 @@ export class KIO<S extends object, E, A> {
   }
 
   static deleteRecords<R extends KFields<R>>(args: {
-    records: KRecordList<R>;
+    records: KRecord<R>[];
   }): KIO<object, never, void> {
     return new KIO({
       kind: "DeleteRecords",
@@ -249,7 +238,7 @@ export type KIOA<E, A> =
     }
   | {
       kind: "AddRecords";
-      records: KNewRecordList<_KFields>;
+      records: KNewRecord<_KFields>[];
     }
   | {
       kind: "UpdateRecord";
@@ -257,7 +246,7 @@ export type KIOA<E, A> =
     }
   | {
       kind: "UpdateRecords";
-      records: KRecordList<_KFields>;
+      records: KRecord<_KFields>[];
     }
   | {
       kind: "DeleteRecord";
@@ -265,7 +254,7 @@ export type KIOA<E, A> =
     }
   | {
       kind: "DeleteRecords";
-      records: KRecordList<_KFields>;
+      records: KRecord<_KFields>[];
     }
   | {
       kind: "Commit";

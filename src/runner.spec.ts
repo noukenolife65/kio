@@ -8,7 +8,7 @@ import {
   GetRecordsResponse,
   KintoneClient,
 } from "./client.ts";
-import { _KFields, KError, KRecord, KRecordList } from "./data.ts";
+import { _KFields, KError, KRecord } from "./data.ts";
 import { KintoneRestAPIClient } from "@kintone/rest-api-client";
 import { KVPairs } from "./helper.ts";
 import SavedFields = kintone.types.SavedFields;
@@ -229,17 +229,14 @@ describe("KIORunnerImpl", () => {
           // Then
           expect(result).toStrictEqual(
             new Right(
-              new KRecordList(
-                app,
-                expectedRecords.map(
-                  (expectedRecord) =>
-                    new KRecord(
-                      expectedRecord,
-                      app,
-                      expectedRecord.$id.value,
-                      expectedRecord.$revision.value,
-                    ),
-                ),
+              expectedRecords.map(
+                (expectedRecord) =>
+                  new KRecord(
+                    expectedRecord,
+                    app,
+                    expectedRecord.$id.value,
+                    expectedRecord.$revision.value,
+                  ),
               ),
             ),
           );
@@ -359,7 +356,7 @@ describe("KIORunnerImpl", () => {
         // When
         const result = await KIO.getRecord<Fields>({
           app,
-          id: savedRecord.$id.value,
+          id: savedRecord!.$id.value,
         })
           .andThen((a) =>
             KIO.updateRecord({
@@ -374,12 +371,12 @@ describe("KIORunnerImpl", () => {
         // Then
         const { record: updatedRecord } = await kClient.record.getRecord({
           app,
-          id: savedRecord.$id.value,
+          id: savedRecord!.$id.value,
         });
         const expectedRecord = {
           ...savedRecord,
-          text: { ...savedRecord.text, value: "updated" },
-          $revision: { ...savedRecord.$revision, value: "2" },
+          text: { ...savedRecord!.text, value: "updated" },
+          $revision: { ...savedRecord!.$revision, value: "2" },
         };
         expect(updatedRecord).toStrictEqual(expectedRecord);
         expect(result).toStrictEqual(new Right(undefined));
@@ -406,10 +403,12 @@ describe("KIORunnerImpl", () => {
         })
           .andThen((a) =>
             KIO.updateRecords({
-              records: a.update((value) => ({
-                ...value,
-                text: { value: "updated" },
-              })),
+              records: a.map((record) =>
+                record.update((value) => ({
+                  ...value,
+                  text: { value: "updated" },
+                })),
+              ),
             }),
           )
           .andThen(() => KIO.commit())
@@ -444,7 +443,7 @@ describe("KIORunnerImpl", () => {
         // When
         const result = await KIO.getRecord<Fields>({
           app,
-          id: savedRecord.$id.value,
+          id: savedRecord!.$id.value,
         })
           .andThen((record) => KIO.deleteRecord({ record }))
           .andThen(() => KIO.commit())
@@ -499,13 +498,15 @@ describe("KIORunnerImpl", () => {
             .andThen(() => KIO.commit())
             .andThen("savepoint1", () => KIO.getRecords({ app }))
             .map((a) => {
-              return a.update((record) => ({
-                ...record,
-                text: { value: "updated" },
-              }));
+              return a.map((record) =>
+                record.update((value) => ({
+                  ...value,
+                  text: { value: "updated" },
+                })),
+              );
             })
             .andThen((a) => {
-              return KIO.updateRecord({ record: a.records[0] });
+              return KIO.updateRecord({ record: a[0]! });
             })
             // .andThen(() => KIO.commit())
             .andThen((record) => {
@@ -514,7 +515,7 @@ describe("KIORunnerImpl", () => {
             .andThen(() => KIO.commit())
             .andThen("savepoint2", () => KIO.getRecords({ app }))
             .map((_a, s) => {
-              expect(s.savepoint2.records).toHaveLength(0);
+              expect(s.savepoint2).toHaveLength(0);
             })
             .run(runner);
           // Then
@@ -532,12 +533,8 @@ describe("KIORunnerImpl", () => {
             )
             .andThen(() => KIO.commit())
             .andThen("savepoint1", () => KIO.getRecords({ app }))
-            .andThen((_, s) =>
-              KIO.deleteRecord({ record: s.savepoint1.records[0] }),
-            )
-            .andThen((_, s) =>
-              KIO.updateRecord({ record: s.savepoint1.records[0] }),
-            )
+            .andThen((_, s) => KIO.deleteRecord({ record: s.savepoint1[0]! }))
+            .andThen((_, s) => KIO.updateRecord({ record: s.savepoint1[0]! }))
             .andThen(() => KIO.commit())
             .run(runner);
           // Then
