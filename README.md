@@ -1,11 +1,13 @@
 # KIO (kintone IO) - Proof of Concept
 
-A TypeScript library for handling kintone API operations with transactional support using kintone's bulk request feature and retry capabilities. This is currently a Proof of Concept (PoC) and is not yet ready for production use.
+A TypeScript library designed to simplify kintone API operations with transactional support, retry mechanisms, and functional error handling.
 
 ## Features
 
-- Transactional operations using kintone's bulk request
-- Retry mechanism for failed operations
+- Implements unit of work pattern, using kintone bulk request for transactional support
+- Provides a retry mechanism with configurable policies (e.g., recursive retries)
+- Supports functional error handling, using the `Either` type
+- Offers CRUD operations for kintone records (create, read, update, delete)
 
 ## Prerequisites
 
