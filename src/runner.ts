@@ -14,7 +14,7 @@ import { _KFields, KIdField, KRecord, KRevisionField } from "./data.ts";
 import { KintoneRestAPIClient } from "@kintone/rest-api-client";
 
 export interface KIORunner {
-  run<E, A>(kioa: KIOA<E, A>): Promise<Either<E, A>>;
+  run<E, A>(kioa: KIOA<E, A>): Promise<A>;
 }
 
 export class KIORunnerImpl implements KIORunner {
@@ -319,16 +319,16 @@ export class KIORunnerImpl implements KIORunner {
     );
   }
 
-  async run<E, A>(kioa: KIOA<E, A>): Promise<Either<E, A>> {
+  async run<E, A>(kioa: KIOA<E, A>): Promise<A> {
     const result = await this._interpret([], {}, kioa);
     switch (result.kind) {
       case "Left": {
         const [, error] = result.value;
-        return new Left(error) as Left<E>;
+        throw error as E;
       }
       case "Right": {
         const [, , a] = result.value;
-        return new Right(a) as Right<A>;
+        return a as A;
       }
     }
   }
