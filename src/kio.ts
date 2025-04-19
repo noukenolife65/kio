@@ -1,5 +1,4 @@
 import { KIORunner } from "./runner.ts";
-import { Either } from "./either.ts";
 import { _KFields, KError, KFields, KNewRecord, KRecord } from "./data.ts";
 import { RetryPolicy } from "./retry/policy.ts";
 
@@ -197,7 +196,7 @@ export class KIO<S extends object, E, A> {
     return new KIO({ kind: "Commit" });
   }
 
-  async run(runner: KIORunner): Promise<Either<E, A>> {
+  async run(runner: KIORunner): Promise<A> {
     return runner.run(this.kioa);
   }
 }
