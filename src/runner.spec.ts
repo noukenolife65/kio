@@ -1,7 +1,7 @@
 import { describe, expect, it, onTestFinished } from "vitest";
 import { KIO } from "./kio.ts";
 import { createRunner, KIORunnerImpl } from "./runner.ts";
-import { Either, Left, Right } from "./either.ts";
+import { Either, Right } from "./either.ts";
 import {
   BulkRequestResponse,
   GetRecordResponse,
@@ -45,21 +45,29 @@ describe("KIORunnerImpl", () => {
       const runner = new KIORunnerImpl(fakeClient);
       it("Succeed", async () => {
         const result = await KIO.succeed(1).run(runner);
-        expect(result).toStrictEqual(new Right(1));
+        expect(result).toBe(1);
       });
       it("Fail", async () => {
-        const result = await KIO.fail("error")
-          .map(() => expect.fail())
-          .run(runner);
-        expect(result).toStrictEqual(new Left("error"));
+        try {
+          await KIO.fail("error")
+            .map(() => expect.fail())
+            .run(runner);
+          expect.fail("should throw error");
+        } catch (error) {
+          expect(error).toBe("error");
+        }
       });
       it("Async", async () => {
         const success = await KIO.async(async () => 1).run(runner);
-        expect(success).toStrictEqual(new Right(1));
-        const failure = await KIO.async<never, string>(async () => {
-          throw "error";
-        }).run(runner);
-        expect(failure).toStrictEqual(new Left("error"));
+        expect(success).toBe(1);
+        try {
+          await KIO.async<never, string>(async () => {
+            throw "error";
+          }).run(runner);
+          expect.fail("should throw error");
+        } catch (error) {
+          expect(error).toBe("error");
+        }
       });
       it("AndThen", async () => {
         const success = await KIO.succeed(1)
@@ -75,13 +83,17 @@ describe("KIORunnerImpl", () => {
             return a;
           })
           .run(runner);
-        expect(success).toStrictEqual(new Right(5));
+        expect(success).toBe(5);
 
-        const failure = await KIO.succeed(1)
-          .andThen(() => KIO.fail("error"))
-          .andThen(() => KIO.succeed(1))
-          .run(runner);
-        expect(failure).toStrictEqual(new Left("error"));
+        try {
+          await KIO.succeed(1)
+            .andThen(() => KIO.fail("error"))
+            .andThen(() => KIO.succeed(1))
+            .run(runner);
+          expect.fail("should throw error");
+        } catch (error) {
+          expect(error).toBe("error");
+        }
       });
       it("Fold", async () => {
         await KIO.start()
@@ -117,13 +129,13 @@ describe("KIORunnerImpl", () => {
           .retry({ kind: "Recurs", times: 2 })
           .catch(() => KIO.succeed(i))
           .run(runner);
-        expect(result).toStrictEqual(new Right(3));
+        expect(result).toBe(3);
       });
       it("Catch", async () => {
         const result = await KIO.fail("error")
           .catch(() => KIO.succeed(1))
           .run(runner);
-        expect(result).toStrictEqual(new Right(1));
+        expect(result).toBe(1);
       });
     });
     describe("Kintone Operations", () => {
@@ -175,31 +187,31 @@ describe("KIORunnerImpl", () => {
           }).run(runner);
           // Then
           expect(result).toStrictEqual(
-            new Right(
-              new KRecord(
-                expectedRecord,
-                app,
-                expectedRecord.$id.value,
-                expectedRecord.$revision.value,
-              ),
+            new KRecord(
+              expectedRecord,
+              app,
+              expectedRecord.$id.value,
+              expectedRecord.$revision.value,
             ),
           );
         });
         it("should fail to get a record", async () => {
           cleanUp();
           // When
-          const result = await KIO.getRecord({
-            app,
-            id: 9999,
-          }).run(runner);
-          // Then
-          expect(result).toStrictEqual(
-            new Left({
+          try {
+            await KIO.getRecord({
+              app,
+              id: 9999,
+            }).run(runner);
+            expect.fail("should throw error");
+          } catch (error) {
+            // Then
+            expect(error).toStrictEqual({
               id: expect.anything(),
               code: expect.anything(),
               message: expect.anything(),
-            }),
-          );
+            });
+          }
         });
       });
       describe("GetRecords", () => {
@@ -228,35 +240,35 @@ describe("KIORunnerImpl", () => {
           }).run(runner);
           // Then
           expect(result).toStrictEqual(
-            new Right(
-              expectedRecords.map(
-                (expectedRecord) =>
-                  new KRecord(
-                    expectedRecord,
-                    app,
-                    expectedRecord.$id.value,
-                    expectedRecord.$revision.value,
-                  ),
-              ),
+            expectedRecords.map(
+              (expectedRecord) =>
+                new KRecord(
+                  expectedRecord,
+                  app,
+                  expectedRecord.$id.value,
+                  expectedRecord.$revision.value,
+                ),
             ),
           );
         });
         it("should fail to get records", async () => {
           cleanUp();
           // When
-          const result = await KIO.getRecords({
-            app,
-            fields: ["text"],
-            query: "invalid query",
-          }).run(runner);
-          // Then
-          expect(result).toStrictEqual(
-            new Left({
+          try {
+            await KIO.getRecords({
+              app,
+              fields: ["text"],
+              query: "invalid query",
+            }).run(runner);
+            expect.fail("should throw error");
+          } catch (error) {
+            // Then
+            expect(error).toStrictEqual({
               id: expect.anything(),
               code: expect.anything(),
               message: expect.anything(),
-            }),
-          );
+            });
+          }
         });
       });
       describe("AddRecord", () => {
@@ -267,7 +279,7 @@ describe("KIORunnerImpl", () => {
             text: { value: `test_${new Date().toTimeString()}` },
           };
           // When
-          const result = await KIO.addRecord({ app, record })
+          await KIO.addRecord({ app, record })
             .andThen(() => KIO.commit())
             .run(runner);
           // Then
@@ -277,25 +289,26 @@ describe("KIORunnerImpl", () => {
           expect(savedRecords.map((r) => r.text.value)).toStrictEqual([
             record.text.value,
           ]);
-          expect(result).toStrictEqual(new Right(undefined));
         });
         it("should fail to add a record", async () => {
           cleanUp();
           // When
-          const result = await KIO.addRecord({
-            app,
-            record: { invalidField: { value: "" } },
-          })
-            .andThen(() => KIO.commit())
-            .run(runner);
-          // Then
-          expect(result).toStrictEqual(
-            new Left({
+          try {
+            await KIO.addRecord({
+              app,
+              record: { invalidField: { value: "" } },
+            })
+              .andThen(() => KIO.commit())
+              .run(runner);
+            expect.fail("should throw error");
+          } catch (error) {
+            // Then
+            expect(error).toStrictEqual({
               id: expect.anything(),
               code: expect.anything(),
               message: expect.anything(),
-            }),
-          );
+            });
+          }
         });
       });
       describe("AddRecords", () => {
@@ -307,7 +320,7 @@ describe("KIORunnerImpl", () => {
             { text: { value: `test_${new Date().toTimeString()}` } },
           ];
           // When
-          const result = await KIO.addRecords({ app, records })
+          await KIO.addRecords({ app, records })
             .andThen(() => KIO.commit())
             .run(runner);
           // Then
@@ -317,25 +330,26 @@ describe("KIORunnerImpl", () => {
           expect(savedRecords.map((r) => r.text.value)).toStrictEqual(
             records.map((r) => r.text.value),
           );
-          expect(result).toStrictEqual(new Right(undefined));
         });
         it("should fail to add records", async () => {
           cleanUp();
           // When
-          const result = await KIO.addRecords({
-            app,
-            records: [{ invalidField: { value: "" } }],
-          })
-            .andThen(() => KIO.commit())
-            .run(runner);
-          // Then
-          expect(result).toStrictEqual(
-            new Left({
+          try {
+            await KIO.addRecords({
+              app,
+              records: [{ invalidField: { value: "" } }],
+            })
+              .andThen(() => KIO.commit())
+              .run(runner);
+            expect.fail("should throw error");
+          } catch (error) {
+            // Then
+            expect(error).toStrictEqual({
               id: expect.anything(),
               code: expect.anything(),
               message: expect.anything(),
-            }),
-          );
+            });
+          }
         });
       });
       it("UpdateRecord", async () => {
@@ -354,7 +368,7 @@ describe("KIORunnerImpl", () => {
           app,
         });
         // When
-        const result = await KIO.getRecord<Fields>({
+        await KIO.getRecord<Fields>({
           app,
           id: savedRecord!.$id.value,
         })
@@ -379,7 +393,6 @@ describe("KIORunnerImpl", () => {
           $revision: { ...savedRecord!.$revision, value: "2" },
         };
         expect(updatedRecord).toStrictEqual(expectedRecord);
-        expect(result).toStrictEqual(new Right(undefined));
       });
       it("UpdateRecords", async () => {
         cleanUp();
@@ -398,7 +411,7 @@ describe("KIORunnerImpl", () => {
           app,
         });
         // When
-        const result = await KIO.getRecords<Fields>({
+        await KIO.getRecords<Fields>({
           app,
         })
           .andThen((a) =>
@@ -423,7 +436,6 @@ describe("KIORunnerImpl", () => {
           $revision: { ...record.$revision, value: "2" },
         }));
         expect(updatedRecords.records).toStrictEqual(expectedRecords);
-        expect(result).toStrictEqual(new Right(undefined));
       });
       it("DeleteRecord", async () => {
         cleanUp();
@@ -441,7 +453,7 @@ describe("KIORunnerImpl", () => {
           app,
         });
         // When
-        const result = await KIO.getRecord<Fields>({
+        await KIO.getRecord<Fields>({
           app,
           id: savedRecord!.$id.value,
         })
@@ -455,7 +467,6 @@ describe("KIORunnerImpl", () => {
           app,
         });
         expect(noRecords).toStrictEqual([]);
-        expect(result).toStrictEqual(new Right(undefined));
       });
       it("DeleteRecords", async () => {
         cleanUp();
@@ -469,7 +480,7 @@ describe("KIORunnerImpl", () => {
           records,
         });
         // When
-        const result = await KIO.getRecords<Fields>({
+        await KIO.getRecords<Fields>({
           app,
         })
           .andThen((a) => KIO.deleteRecords({ records: a }))
@@ -482,13 +493,12 @@ describe("KIORunnerImpl", () => {
           app,
         });
         expect(noRecords).toStrictEqual([]);
-        expect(result).toStrictEqual(new Right(undefined));
       });
       describe("Commit", () => {
         it("should commit", async () => {
           cleanUp();
           // When
-          const result = await KIO.succeed({ text: { value: "test" } })
+          await KIO.succeed({ text: { value: "test" } })
             .andThen("newRecord", (a) =>
               KIO.addRecord({
                 app,
@@ -508,7 +518,6 @@ describe("KIORunnerImpl", () => {
             .andThen((a) => {
               return KIO.updateRecord({ record: a[0]! });
             })
-            // .andThen(() => KIO.commit())
             .andThen((record) => {
               return KIO.deleteRecord({ record });
             })
@@ -518,28 +527,41 @@ describe("KIORunnerImpl", () => {
               expect(s.savepoint2).toHaveLength(0);
             })
             .run(runner);
-          // Then
-          expect(result).toStrictEqual(new Right(undefined));
         });
         it("should rollback", async () => {
           cleanUp();
           // When
-          await KIO.succeed({ text: { value: "test" } })
-            .andThen((a) =>
-              KIO.addRecord({
-                app,
-                record: a,
-              }),
-            )
-            .andThen(() => KIO.commit())
-            .andThen("savepoint1", () => KIO.getRecords({ app }))
-            .andThen((_, s) => KIO.deleteRecord({ record: s.savepoint1[0]! }))
-            .andThen((_, s) => KIO.updateRecord({ record: s.savepoint1[0]! }))
-            .andThen(() => KIO.commit())
-            .run(runner);
-          // Then
-          const { records } = await kClient.record.getRecords({ app });
-          expect(records).toHaveLength(1);
+          try {
+            await KIO.succeed({ text: { value: "test" } })
+              .andThen((a) =>
+                KIO.addRecord({
+                  app,
+                  record: a,
+                }),
+              )
+              .andThen(() => KIO.commit())
+              .andThen("savepoint1", () => KIO.getRecords({ app }))
+              .andThen((_, s) => KIO.updateRecord({ 
+                record: s.savepoint1[0]!.update((value) => ({
+                  ...value,
+                  text: { value: "updated" }
+                }))
+              }))
+              .andThen((_, s) => KIO.deleteRecord({ record: s.savepoint1[0]! }))
+              .andThen(() => KIO.commit())
+              .run(runner);
+            expect.fail("should throw error");
+          } catch {
+            // Then
+            const { records } = await kClient.record.getRecords({ app });
+            expect(records).toHaveLength(1);
+            const record = records[0];
+            if (record?.text?.value) {
+              expect(record.text.value).toBe("test"); // Verify the record wasn't updated
+            } else {
+              expect.fail("record should exist with text field");
+            }
+          }
         });
       });
     });
