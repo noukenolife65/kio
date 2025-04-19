@@ -12,5 +12,5 @@ export default defineConfig({
       external: ["@kintone/rest-api-client"],
     },
   },
-  plugins: [dts()],
+  plugins: [dts({ rollupTypes: true })],
 });
