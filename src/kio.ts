@@ -477,11 +477,14 @@ export class KIO<S extends object, E, A> {
    * 
    * @example
    * ```typescript
-   * const kio = KIO.updateRecord({
-   *   record: { ...existingRecord, title: "Updated Title" }
-   * })
+   * const kio = KIO.getRecord({ app: 1, id: 1 })
+   *   .andThen((record) => {
+   *     // Update the record content using the update method
+   *     const updatedRecord = record.update({ title: "Updated Title" });
+   *     return KIO.updateRecord({ record: updatedRecord });
+   *   })
    *   .andThen(() => KIO.commit());
-   * const updatedRecord = await kio.run(runner);
+   * await kio.run(runner);
    * ```
    */
   static updateRecord<R extends KFields<R>>(args: {
@@ -501,14 +504,16 @@ export class KIO<S extends object, E, A> {
    * 
    * @example
    * ```typescript
-   * const kio = KIO.updateRecords({
-   *   records: records.map(record => ({
-   *     ...record,
-   *     status: "Updated"
-   *   }))
-   * })
+   * const kio = KIO.getRecords({ app: 1 })
+   *   .andThen((records) => {
+   *     // Update the record content using the update method
+   *     const updatedRecords = records.map(record => 
+   *       record.update({ status: "Updated" })
+   *     );
+   *     return KIO.updateRecords({ records: updatedRecords });
+   *   })
    *   .andThen(() => KIO.commit());
-   * const updatedRecords = await kio.run(runner);
+   * await kio.run(runner);
    * ```
    */
   static updateRecords<R extends KFields<R>>(args: {
