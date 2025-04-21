@@ -411,17 +411,18 @@ export class KIO<S extends object, E, A> {
   }
 
   /**
-   * Adds a new record to kintone.
+   * Adds a new record to kintone. The operation won't be executed until commit is called.
    * @template R - The record type
    * @param args - The arguments for adding the record
-   * @returns An effect that will add the record
+   * @returns An effect that will add the record when committed
    * 
    * @example
    * ```typescript
    * const kio = KIO.addRecord({
    *   app: 1,
    *   record: { title: "New Record", description: "Example" }
-   * });
+   * })
+   *   .andThen(() => KIO.commit());
    * await kio.run(runner);
    * ```
    */
@@ -438,10 +439,10 @@ export class KIO<S extends object, E, A> {
   }
 
   /**
-   * Adds multiple records to kintone.
+   * Adds multiple records to kintone. The operations won't be executed until commit is called.
    * @template R - The record type
    * @param args - The arguments for adding the records
-   * @returns An effect that will add the records
+   * @returns An effect that will add the records when committed
    * 
    * @example
    * ```typescript
@@ -451,7 +452,8 @@ export class KIO<S extends object, E, A> {
    *     { title: "First Record", description: "Example 1" },
    *     { title: "Second Record", description: "Example 2" }
    *   ]
-   * });
+   * })
+   *   .andThen(() => KIO.commit());
    * await kio.run(runner);
    * ```
    */
@@ -468,16 +470,17 @@ export class KIO<S extends object, E, A> {
   }
 
   /**
-   * Updates an existing record in kintone.
+   * Updates an existing record in kintone. The operation won't be executed until commit is called.
    * @template R - The record type
    * @param args - The arguments for updating the record
-   * @returns An effect that will update the record
+   * @returns An effect that will update the record when committed
    * 
    * @example
    * ```typescript
    * const kio = KIO.updateRecord({
    *   record: { ...existingRecord, title: "Updated Title" }
-   * });
+   * })
+   *   .andThen(() => KIO.commit());
    * const updatedRecord = await kio.run(runner);
    * ```
    */
@@ -491,10 +494,10 @@ export class KIO<S extends object, E, A> {
   }
 
   /**
-   * Updates multiple records in kintone.
+   * Updates multiple records in kintone. The operations won't be executed until commit is called.
    * @template R - The record type
    * @param args - The arguments for updating the records
-   * @returns An effect that will update the records
+   * @returns An effect that will update the records when committed
    * 
    * @example
    * ```typescript
@@ -503,7 +506,8 @@ export class KIO<S extends object, E, A> {
    *     ...record,
    *     status: "Updated"
    *   }))
-   * });
+   * })
+   *   .andThen(() => KIO.commit());
    * const updatedRecords = await kio.run(runner);
    * ```
    */
@@ -517,16 +521,17 @@ export class KIO<S extends object, E, A> {
   }
 
   /**
-   * Deletes a record from kintone.
+   * Deletes a record from kintone. The operation won't be executed until commit is called.
    * @template R - The record type
    * @param args - The arguments for deleting the record
-   * @returns An effect that will delete the record
+   * @returns An effect that will delete the record when committed
    * 
    * @example
    * ```typescript
    * const kio = KIO.deleteRecord({
    *   record: existingRecord
-   * });
+   * })
+   *   .andThen(() => KIO.commit());
    * await kio.run(runner);
    * ```
    */
@@ -540,16 +545,17 @@ export class KIO<S extends object, E, A> {
   }
 
   /**
-   * Deletes multiple records from kintone.
+   * Deletes multiple records from kintone. The operations won't be executed until commit is called.
    * @template R - The record type
    * @param args - The arguments for deleting the records
-   * @returns An effect that will delete the records
+   * @returns An effect that will delete the records when committed
    * 
    * @example
    * ```typescript
    * const kio = KIO.deleteRecords({
    *   records: recordsToDelete
-   * });
+   * })
+   *   .andThen(() => KIO.commit());
    * await kio.run(runner);
    * ```
    */
@@ -563,13 +569,17 @@ export class KIO<S extends object, E, A> {
   }
 
   /**
-   * Commits changes to kintone.
-   * @returns An effect that will commit the changes
+   * Commits all pending changes to kintone. This is required to execute any add, update, or delete operations.
+   * Multiple write operations can be stacked and will be executed together when commit is called.
+   * @returns An effect that will commit all pending changes
    * 
    * @example
    * ```typescript
+   * // Stack multiple operations and commit them together
    * const kio = KIO.getRecord({ app: 1, id: 1 })
    *   .andThen((record) => KIO.updateRecord({ record: { ...record, title: "Updated" } }))
+   *   .andThen(() => KIO.addRecord({ app: 1, record: { title: "New Record" } }))
+   *   .andThen(() => KIO.deleteRecord({ record: anotherRecord }))
    *   .andThen(() => KIO.commit());
    * await kio.run(runner);
    * ```
