@@ -6,7 +6,7 @@ A TypeScript library designed to simplify kintone API operations with transactio
 
 - Implements unit of work pattern, using kintone bulk request for transactional support
 - Provides a retry mechanism with configurable policies (e.g., recursive retries)
-- Supports functional error handling, using the `Either` type
+- Supports error handling operations
 - Offers CRUD operations for kintone records (create, read, update, delete)
 
 ## Prerequisites
