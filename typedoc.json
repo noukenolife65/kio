@@ -1,0 +1,15 @@
+{
+  "entryPoints": ["src"],
+  "out": "docs",
+  "name": "kio",
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeExternals": true,
+  "theme": "default",
+  "readme": "README.md",
+  "includeVersion": true,
+  "hideGenerator": true,
+  "categorizeByGroup": true,
+  "searchInComments": true,
+  "sort": ["source-order"]
+}
