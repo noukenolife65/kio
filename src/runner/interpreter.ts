@@ -1,141 +1,121 @@
-import { KIOA } from "./kio.ts";
-import { Either, Left, Right } from "./either.ts";
+import { Type, URIS } from "../hkt.ts";
+import { Effect } from "../effect.ts";
 import {
   AddRecordRequest,
   AddRecordsRequest,
   BulkRequest,
   DeleteRecordsRequest,
   KintoneClient,
-  KintoneClientImpl,
   UpdateRecordRequest,
   UpdateRecordsRequest,
-} from "./client.ts";
-import { _KFields, KIdField, KRecord, KRevisionField } from "./data.ts";
-import { KintoneRestAPIClient } from "@kintone/rest-api-client";
+} from "../client.ts";
+import { KIOA } from "../kio.ts";
+import { _KFields, KIdField, KRecord, KRevisionField } from "../data.ts";
 
-export interface KIORunner {
-  run<E, A>(kioa: KIOA<E, A>): Promise<A>;
-}
+export class Interpreter<F extends URIS> {
+  private readonly client: KintoneClient;
+  private readonly F: Effect<F>;
 
-export class KIORunnerImpl implements KIORunner {
-  private client: KintoneClient;
-
-  constructor(client: KintoneClient) {
+  constructor(F: Effect<F>, client: KintoneClient) {
+    this.F = F;
     this.client = client;
   }
 
-  private async _interpret(
+  run(
     bulkRequests: BulkRequest[],
     state: object,
     kioa: KIOA<unknown, unknown>,
-  ): Promise<Either<[object, unknown], [BulkRequest[], object, unknown]>> {
+  ): Type<F, [object, unknown], [BulkRequest[], object, unknown]> {
+    const F = this.F;
     switch (kioa.kind) {
       case "Succeed": {
-        return Promise.resolve(new Right([bulkRequests, state, kioa.value]));
+        return F.succeed([bulkRequests, state, kioa.value]);
       }
       case "Fail": {
-        return Promise.resolve(new Left([state, kioa.error]));
+        return F.fail([state, kioa.error]);
       }
       case "Async": {
-        try {
-          const a = await kioa.f();
-          return new Right([bulkRequests, state, a]);
-        } catch (e) {
-          return new Left([state, e]);
-        }
+        const async = F.async(kioa.f);
+        return F.flatMap(async, (a) => F.succeed([bulkRequests, state, a]));
       }
       case "AndThen": {
-        const r1 = await this._interpret(bulkRequests, state, kioa.self);
-        return (async () => {
-          switch (r1.kind) {
-            case "Left":
-              return r1;
-            case "Right": {
-              const [bulkRequests1, s1, a1] = r1.value;
-              const kioa2 = kioa.f(a1, s1);
-              const r2 = await this._interpret(bulkRequests1, s1, kioa2);
-              return (() => {
-                switch (r2.kind) {
-                  case "Left":
-                    return r2;
-                  case "Right": {
-                    const [bulkRequests2, , a2] = r2.value;
-                    const s2 = kioa.name ? { ...s1, [kioa.name]: a2 } : s1;
-                    return new Right([bulkRequests2, s2, a2]);
-                  }
-                }
-              })();
-            }
-          }
-        })();
+        const r1 = this.run(bulkRequests, state, kioa.self);
+        return F.flatMap(r1, ([bulkRequests1, s1, a1]) => {
+          const kioa2 = kioa.f(a1, s1);
+          const r2 = this.run(bulkRequests1, s1, kioa2);
+          return F.flatMap(r2, ([bulkRequests2, , a2]) => {
+            const s2 = kioa.name ? { ...s1, [kioa.name]: a2 } : s1;
+            return F.succeed([bulkRequests2, s2, a2]);
+          });
+        });
       }
       case "Fold": {
-        const r = await this._interpret(bulkRequests, state, kioa.self);
-        return (() => {
-          switch (r.kind) {
-            case "Left": {
-              const [s, e] = r.value;
-              return this._interpret(bulkRequests, s, kioa.failure(e, s));
-            }
-            case "Right": {
-              const [bulkRequests1, s1, a1] = r.value;
-              return this._interpret(bulkRequests1, s1, kioa.success(a1, s1));
-            }
-          }
-        })();
+        const r = this.run(bulkRequests, state, kioa.self);
+        return F.fold(
+          r,
+          ([s, e]) => this.run(bulkRequests, s, kioa.failure(e, s)),
+          ([bulkRequests1, s1, a1]) =>
+            this.run(bulkRequests1, s1, kioa.success(a1, s1)),
+        );
       }
       case "GetRecord": {
-        const response = await this.client.getRecord({
-          app: kioa.app,
-          id: kioa.id,
+        const getRecord = F.async(() =>
+          this.client.getRecord({
+            app: kioa.app,
+            id: kioa.id,
+          }),
+        );
+        return F.flatMap(getRecord, (response) => {
+          return (() => {
+            switch (response.kind) {
+              case "Left": {
+                return F.fail([state, response.value]);
+              }
+              case "Right": {
+                const { record } = response.value;
+                const revision = record.$revision.value;
+                const id = record.$id.value;
+                const kRecord = new KRecord(record, kioa.app, id, revision);
+                return F.succeed([bulkRequests, state, kRecord]);
+              }
+            }
+          })();
         });
-        return (() => {
-          switch (response.kind) {
-            case "Left": {
-              return new Left([state, response.value]);
-            }
-            case "Right": {
-              const { record } = response.value;
-              const revision = record.$revision.value;
-              const id = record.$id.value;
-              const kRecord = new KRecord(record, kioa.app, id, revision);
-              return new Right([bulkRequests, state, kRecord]);
-            }
-          }
-        })();
       }
       case "GetRecords": {
         const { app, fields: orgFields, query } = kioa;
         const fields = orgFields
           ? [...orgFields, "$id", "$revision"]
           : undefined;
-        const response = await this.client.getRecords<
-          KIdField & KRevisionField
-        >({
-          app,
-          fields,
-          query,
+        const getRecords = F.async(() =>
+          this.client.getRecords<KIdField & KRevisionField>({
+            app,
+            fields,
+            query,
+          }),
+        );
+        return F.flatMap(getRecords, (response) => {
+          return (() => {
+            switch (response.kind) {
+              case "Left": {
+                return F.fail([state, response.value]);
+              }
+              case "Right": {
+                const { records } = response.value;
+                const kRecordList = records.map(
+                  (record) =>
+                    new KRecord(
+                      record,
+                      app,
+                      record.$id.value,
+                      record.$revision.value,
+                    ),
+                );
+                return F.succeed([bulkRequests, state, kRecordList]);
+              }
+            }
+          })();
         });
-        return (() => {
-          switch (response.kind) {
-            case "Left": {
-              return new Left([state, response.value]);
-            }
-            case "Right": {
-              const { records } = response.value;
-              const kRecordList = records.map(
-                (record) =>
-                  new KRecord(
-                    record,
-                    app,
-                    record.$id.value,
-                    record.$revision.value,
-                  ),
-              );
-              return new Right([bulkRequests, state, kRecordList]);
-            }
-          }
-        })();
       }
       case "AddRecord": {
         const { record } = kioa;
@@ -147,7 +127,7 @@ export class KIORunnerImpl implements KIORunner {
             record: record.value,
           },
         };
-        return new Right([
+        return F.succeed([
           [...bulkRequests, addRecordRequest],
           state,
           undefined,
@@ -169,7 +149,7 @@ export class KIORunnerImpl implements KIORunner {
             records: records.map((record) => record.value),
           },
         };
-        return new Right([
+        return F.succeed([
           [...bulkRequests, addRecordsRequest],
           state,
           undefined,
@@ -190,7 +170,7 @@ export class KIORunnerImpl implements KIORunner {
             revision: record.revision,
           },
         };
-        return new Right([
+        return F.succeed([
           [...bulkRequests, updateRecordRequest],
           state,
           new KRecord(
@@ -227,7 +207,7 @@ export class KIORunnerImpl implements KIORunner {
             records: updatingRecords,
           },
         };
-        return new Right([
+        return F.succeed([
           [...bulkRequests, updateRecordsRequest],
           state,
           records.map((record) => {
@@ -251,7 +231,7 @@ export class KIORunnerImpl implements KIORunner {
             revisions: [record.revision ?? -1],
           },
         };
-        return new Right([
+        return F.succeed([
           [...bulkRequests, deleteRecordRequest],
           state,
           undefined,
@@ -274,7 +254,7 @@ export class KIORunnerImpl implements KIORunner {
             revisions: records.map((record) => record.revision ?? -1),
           },
         };
-        return new Right([
+        return F.succeed([
           [...bulkRequests, deleteRecordsRequest],
           state,
           undefined,
@@ -282,23 +262,29 @@ export class KIORunnerImpl implements KIORunner {
       }
       case "Commit": {
         if (bulkRequests.length > 0) {
-          const result = await this.client.bulkRequest({
-            requests: bulkRequests,
+          const bulkRequest = F.async(() =>
+            this.client.bulkRequest({
+              requests: bulkRequests,
+            }),
+          );
+          return F.flatMap(bulkRequest, (result) => {
+            return (() => {
+              switch (result.kind) {
+                case "Left": {
+                  return F.fail([state, result.value]);
+                }
+                case "Right": {
+                  return F.succeed([Array<BulkRequest>(), state, undefined]);
+                }
+              }
+            })();
           });
-          return (() => {
-            switch (result.kind) {
-              case "Left": {
-                return new Left([state, result.value]);
-              }
-              case "Right": {
-                return new Right([Array<BulkRequest>(), state, undefined]);
-              }
-            }
-          })();
         } else {
-          return new Right([Array<BulkRequest>(), state, undefined]);
+          return F.succeed([Array<BulkRequest>(), state, undefined]);
         }
       }
+      default:
+        throw new Error("Not implemented");
     }
   }
 
@@ -318,21 +304,4 @@ export class KIORunnerImpl implements KIORunner {
       }),
     );
   }
-
-  async run<E, A>(kioa: KIOA<E, A>): Promise<A> {
-    const result = await this._interpret([], {}, kioa);
-    switch (result.kind) {
-      case "Left": {
-        const [, error] = result.value;
-        throw error as E;
-      }
-      case "Right": {
-        const [, , a] = result.value;
-        return a as A;
-      }
-    }
-  }
 }
-
-export const createRunner = (client: KintoneRestAPIClient): KIORunner =>
-  new KIORunnerImpl(new KintoneClientImpl(client));
