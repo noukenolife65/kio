@@ -1,20 +1,20 @@
 import { describe, expect, it, onTestFinished } from "vitest";
-import { KIO } from "./kio.ts";
-import { createRunner, KIORunnerImpl } from "./runner.ts";
-import { Either, Right } from "./either.ts";
+import { KIO } from "../kio.ts";
+import { Either, Right } from "../either.ts";
 import {
   BulkRequestResponse,
   GetRecordResponse,
   GetRecordsResponse,
   KintoneClient,
-} from "./client.ts";
-import { _KFields, KError, KRecord } from "./data.ts";
+} from "../client.ts";
+import { _KFields, KError, KRecord } from "../data.ts";
 import { KintoneRestAPIClient } from "@kintone/rest-api-client";
-import { KVPairs } from "./helper.ts";
+import { KVPairs } from "../helper.ts";
+import { createRunner, PromiseRunner } from "./promise/runner.ts";
 import SavedFields = kintone.types.SavedFields;
 import Fields = kintone.types.Fields;
 
-describe("KIORunnerImpl", () => {
+describe("PromiseRunner", () => {
   describe("run", () => {
     describe("Basic Operations", () => {
       class FakeKintoneClient implements KintoneClient {
@@ -42,35 +42,37 @@ describe("KIORunnerImpl", () => {
         }
       }
       const fakeClient = new FakeKintoneClient();
-      const runner = new KIORunnerImpl(fakeClient);
+      const runner = new PromiseRunner(fakeClient);
       it("Succeed", async () => {
-        const result = await KIO.succeed(1).run(runner);
+        const kio = KIO.succeed(1);
+        const result = await runner.run(kio);
         expect(result).toBe(1);
       });
       it("Fail", async () => {
         try {
-          await KIO.fail("error")
-            .map(() => expect.fail())
-            .run(runner);
+          const kio = KIO.fail("error").map(() => expect.fail());
+          await runner.run(kio);
           expect.fail("should throw error");
         } catch (error) {
           expect(error).toBe("error");
         }
       });
       it("Async", async () => {
-        const success = await KIO.async(async () => 1).run(runner);
+        const kio = KIO.async(async () => 1);
+        const success = await runner.run(kio);
         expect(success).toBe(1);
         try {
-          await KIO.async<never, string>(async () => {
+          const kio = KIO.async<never, string>(async () => {
             throw "error";
-          }).run(runner);
+          });
+          await runner.run(kio);
           expect.fail("should throw error");
         } catch (error) {
           expect(error).toBe("error");
         }
       });
       it("AndThen", async () => {
-        const success = await KIO.succeed(1)
+        const kio = KIO.succeed(1)
           .andThen((a) => KIO.succeed(a + 1))
           .andThen("andThen", (a) => KIO.succeed(a + 1))
           .map((a) => a + 1)
@@ -81,22 +83,22 @@ describe("KIORunnerImpl", () => {
               map: 5,
             });
             return a;
-          })
-          .run(runner);
+          });
+        const success = await runner.run(kio);
         expect(success).toBe(5);
 
         try {
-          await KIO.succeed(1)
+          const kio = KIO.succeed(1)
             .andThen(() => KIO.fail("error"))
-            .andThen(() => KIO.succeed(1))
-            .run(runner);
+            .andThen(() => KIO.succeed(1));
+          await runner.run(kio);
           expect.fail("should throw error");
         } catch (error) {
           expect(error).toBe("error");
         }
       });
       it("Fold", async () => {
-        await KIO.start()
+        const kio = KIO.start()
           .andThen("value", () => KIO.succeed(1))
           .andThen(() => KIO.fail("error"))
           .fold(
@@ -118,23 +120,22 @@ describe("KIORunnerImpl", () => {
             () => {
               expect.fail("should not be called");
             },
-          )
-          .run(runner);
+          );
+        await runner.run(kio);
       });
       it("Retry", async () => {
         let i = 0;
-        const result = await KIO.start()
+        const kio = KIO.start()
           .andThen(() => KIO.succeed(i++))
           .andThen(() => KIO.fail("error"))
           .retry({ kind: "Recurs", times: 2 })
-          .catch(() => KIO.succeed(i))
-          .run(runner);
+          .catch(() => KIO.succeed(i));
+        const result = await runner.run(kio);
         expect(result).toBe(3);
       });
       it("Catch", async () => {
-        const result = await KIO.fail("error")
-          .catch(() => KIO.succeed(1))
-          .run(runner);
+        const kio = KIO.fail("error").catch(() => KIO.succeed(1));
+        const result = await runner.run(kio);
         expect(result).toBe(1);
       });
     });
@@ -181,10 +182,11 @@ describe("KIORunnerImpl", () => {
             id,
           });
           // When
-          const result = await KIO.getRecord<SavedFields>({
+          const kio = KIO.getRecord<SavedFields>({
             app,
             id,
-          }).run(runner);
+          });
+          const result = await runner.run(kio);
           // Then
           expect(result).toStrictEqual(
             new KRecord(
@@ -198,11 +200,12 @@ describe("KIORunnerImpl", () => {
         it("should fail to get a record", async () => {
           cleanUp();
           // When
+          const kio = KIO.getRecord({
+            app,
+            id: 9999,
+          });
           try {
-            await KIO.getRecord({
-              app,
-              id: 9999,
-            }).run(runner);
+            await runner.run(kio);
             expect.fail("should throw error");
           } catch (error) {
             // Then
@@ -233,11 +236,12 @@ describe("KIORunnerImpl", () => {
             query: `$id = ${id}`,
           });
           // When
-          const result = await KIO.getRecords<SavedFields>({
+          const kio = KIO.getRecords<SavedFields>({
             app,
             fields: ["text"],
             query: `$id = ${id}`,
-          }).run(runner);
+          });
+          const result = await runner.run(kio);
           // Then
           expect(result).toStrictEqual(
             expectedRecords.map(
@@ -254,12 +258,13 @@ describe("KIORunnerImpl", () => {
         it("should fail to get records", async () => {
           cleanUp();
           // When
+          const kio = KIO.getRecords({
+            app,
+            fields: ["text"],
+            query: "invalid query",
+          });
           try {
-            await KIO.getRecords({
-              app,
-              fields: ["text"],
-              query: "invalid query",
-            }).run(runner);
+            await runner.run(kio);
             expect.fail("should throw error");
           } catch (error) {
             // Then
@@ -279,9 +284,10 @@ describe("KIORunnerImpl", () => {
             text: { value: `test_${new Date().toTimeString()}` },
           };
           // When
-          await KIO.addRecord({ app, record })
-            .andThen(() => KIO.commit())
-            .run(runner);
+          const kio = KIO.addRecord({ app, record }).andThen(() =>
+            KIO.commit(),
+          );
+          await runner.run(kio);
           // Then
           const savedRecords = await kClient.record.getAllRecords<
             KVPairs<Fields>
@@ -293,13 +299,12 @@ describe("KIORunnerImpl", () => {
         it("should fail to add a record", async () => {
           cleanUp();
           // When
+          const kio = KIO.addRecord({
+            app,
+            record: { invalidField: { value: "" } },
+          }).andThen(() => KIO.commit());
           try {
-            await KIO.addRecord({
-              app,
-              record: { invalidField: { value: "" } },
-            })
-              .andThen(() => KIO.commit())
-              .run(runner);
+            await runner.run(kio);
             expect.fail("should throw error");
           } catch (error) {
             // Then
@@ -320,9 +325,10 @@ describe("KIORunnerImpl", () => {
             { text: { value: `test_${new Date().toTimeString()}` } },
           ];
           // When
-          await KIO.addRecords({ app, records })
-            .andThen(() => KIO.commit())
-            .run(runner);
+          const kio = KIO.addRecords({ app, records }).andThen(() =>
+            KIO.commit(),
+          );
+          await runner.run(kio);
           // Then
           const savedRecords = await kClient.record.getAllRecords<
             KVPairs<Fields>
@@ -334,13 +340,12 @@ describe("KIORunnerImpl", () => {
         it("should fail to add records", async () => {
           cleanUp();
           // When
+          const kio = KIO.addRecords({
+            app,
+            records: [{ invalidField: { value: "" } }],
+          }).andThen(() => KIO.commit());
           try {
-            await KIO.addRecords({
-              app,
-              records: [{ invalidField: { value: "" } }],
-            })
-              .andThen(() => KIO.commit())
-              .run(runner);
+            await runner.run(kio);
             expect.fail("should throw error");
           } catch (error) {
             // Then
@@ -368,7 +373,7 @@ describe("KIORunnerImpl", () => {
           app,
         });
         // When
-        await KIO.getRecord<Fields>({
+        const kio = KIO.getRecord<Fields>({
           app,
           id: savedRecord!.$id.value,
         })
@@ -380,8 +385,8 @@ describe("KIORunnerImpl", () => {
               })),
             }),
           )
-          .andThen(() => KIO.commit())
-          .run(runner);
+          .andThen(() => KIO.commit());
+        await runner.run(kio);
         // Then
         const { record: updatedRecord } = await kClient.record.getRecord({
           app,
@@ -411,7 +416,7 @@ describe("KIORunnerImpl", () => {
           app,
         });
         // When
-        await KIO.getRecords<Fields>({
+        const kio = KIO.getRecords<Fields>({
           app,
         })
           .andThen((a) =>
@@ -424,8 +429,8 @@ describe("KIORunnerImpl", () => {
               ),
             }),
           )
-          .andThen(() => KIO.commit())
-          .run(runner);
+          .andThen(() => KIO.commit());
+        await runner.run(kio);
         // Then
         const updatedRecords = await kClient.record.getRecords({
           app,
@@ -453,13 +458,13 @@ describe("KIORunnerImpl", () => {
           app,
         });
         // When
-        await KIO.getRecord<Fields>({
+        const kio = KIO.getRecord<Fields>({
           app,
           id: savedRecord!.$id.value,
         })
           .andThen((record) => KIO.deleteRecord({ record }))
-          .andThen(() => KIO.commit())
-          .run(runner);
+          .andThen(() => KIO.commit());
+        await runner.run(kio);
         // Then
         const { records: noRecords } = await kClient.record.getRecords<
           KVPairs<SavedFields>
@@ -468,37 +473,39 @@ describe("KIORunnerImpl", () => {
         });
         expect(noRecords).toStrictEqual([]);
       });
-      it("DeleteRecords", async () => {
-        cleanUp();
-        // Given
-        const records: KVPairs<Fields>[] = [
-          { text: { value: `test_${new Date().toTimeString()}` } },
-          { text: { value: `test_${new Date().toTimeString()}` } },
-        ];
-        await kClient.record.addRecords({
-          app,
-          records,
+      describe("DeleteRecords", () => {
+        it("should delete records", async () => {
+          cleanUp();
+          // Given
+          const records: KVPairs<Fields>[] = [
+            { text: { value: `test_${new Date().toTimeString()}` } },
+            { text: { value: `test_${new Date().toTimeString()}` } },
+          ];
+          await kClient.record.addRecords({
+            app,
+            records,
+          });
+          // When
+          const kio = KIO.getRecords<Fields>({
+            app,
+          })
+            .andThen((a) => KIO.deleteRecords({ records: a }))
+            .andThen(() => KIO.commit());
+          await runner.run(kio);
+          // Then
+          const { records: noRecords } = await kClient.record.getRecords<
+            KVPairs<SavedFields>
+          >({
+            app,
+          });
+          expect(noRecords).toStrictEqual([]);
         });
-        // When
-        await KIO.getRecords<Fields>({
-          app,
-        })
-          .andThen((a) => KIO.deleteRecords({ records: a }))
-          .andThen(() => KIO.commit())
-          .run(runner);
-        // Then
-        const { records: noRecords } = await kClient.record.getRecords<
-          KVPairs<SavedFields>
-        >({
-          app,
-        });
-        expect(noRecords).toStrictEqual([]);
       });
       describe("Commit", () => {
         it("should commit", async () => {
           cleanUp();
           // When
-          await KIO.succeed({ text: { value: "test" } })
+          const kio = KIO.succeed({ text: { value: "test" } })
             .andThen("newRecord", (a) =>
               KIO.addRecord({
                 app,
@@ -525,31 +532,33 @@ describe("KIORunnerImpl", () => {
             .andThen("savepoint2", () => KIO.getRecords({ app }))
             .map((_a, s) => {
               expect(s.savepoint2).toHaveLength(0);
-            })
-            .run(runner);
+            });
+          await runner.run(kio);
         });
         it("should rollback", async () => {
           cleanUp();
           // When
-          try {
-            await KIO.succeed({ text: { value: "test" } })
-              .andThen((a) =>
-                KIO.addRecord({
-                  app,
-                  record: a,
-                }),
-              )
-              .andThen(() => KIO.commit())
-              .andThen("savepoint1", () => KIO.getRecords({ app }))
-              .andThen((_, s) => KIO.updateRecord({ 
+          const kio = KIO.succeed({ text: { value: "test" } })
+            .andThen((a) =>
+              KIO.addRecord({
+                app,
+                record: a,
+              }),
+            )
+            .andThen(() => KIO.commit())
+            .andThen("savepoint1", () => KIO.getRecords({ app }))
+            .andThen((_, s) =>
+              KIO.updateRecord({
                 record: s.savepoint1[0]!.update((value) => ({
                   ...value,
-                  text: { value: "updated" }
-                }))
-              }))
-              .andThen((_, s) => KIO.deleteRecord({ record: s.savepoint1[0]! }))
-              .andThen(() => KIO.commit())
-              .run(runner);
+                  text: { value: "updated" },
+                })),
+              }),
+            )
+            .andThen((_, s) => KIO.deleteRecord({ record: s.savepoint1[0]! }))
+            .andThen(() => KIO.commit());
+          try {
+            await runner.run(kio);
             expect.fail("should throw error");
           } catch {
             // Then

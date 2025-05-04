@@ -1,4 +1,3 @@
-import { KIORunner } from "./runner.ts";
 import { _KFields, KError, KFields, KNewRecord, KRecord } from "./data.ts";
 import { RetryPolicy } from "./retry/policy.ts";
 
@@ -6,7 +5,7 @@ import { RetryPolicy } from "./retry/policy.ts";
  * A type that preserves named state in KIO operations.
  * @template T - The name of the state property
  * @template A - The type of the state value
- * 
+ *
  * @example
  * ```typescript
  * // When using andThen with a name:
@@ -109,17 +108,18 @@ export type KIOA<E, A> =
  * @template S - The state type
  * @template E - The error type
  * @template A - The success value type
- * 
+ *
  * @example
  * ```typescript
  * // Basic usage
- * const result = await KIO.getRecord({ app: 1, id: 1 })
- *   .andThen("record", (record) => KIO.updateRecord({ record: { ...record, title: "Updated" } }))
- *   .run(runner);
+ * const kio = KIO.getRecord({ app: 1, id: 1 })
+ *   .andThen("record", (record) => KIO.updateRecord({ record: { ...record, title: "Updated" } }));
+ * 
+ * const result = await runner.run(kio);
  * ```
  */
 export class KIO<S extends object, E, A> {
-  private kioa: KIOA<E, A>;
+  readonly kioa: KIOA<E, A>;
 
   /** @private */
   private constructor(kioa: KIOA<E, A>) {
@@ -129,7 +129,7 @@ export class KIO<S extends object, E, A> {
   /**
    * Creates an effect that represents a successful operation with no value.
    * @returns An effect with no value
-   * 
+   *
    * @example
    * ```typescript
    * const kio = KIO.start();
@@ -144,7 +144,7 @@ export class KIO<S extends object, E, A> {
    * @template A - The type of the success value
    * @param a - The success value
    * @returns An effect with the given value
-   * 
+   *
    * @example
    * ```typescript
    * const kio = KIO.succeed(42);
@@ -159,7 +159,7 @@ export class KIO<S extends object, E, A> {
    * @template E - The type of the error
    * @param e - The error value
    * @returns An effect with the given error
-   * 
+   *
    * @example
    * ```typescript
    * const kio = KIO.fail(new Error("Something went wrong"));
@@ -175,7 +175,7 @@ export class KIO<S extends object, E, A> {
    * @template E - The type of the error (defaults to unknown)
    * @param f - The async function to execute
    * @returns An effect that will execute the async function
-   * 
+   *
    * @example
    * ```typescript
    * const kio = KIO.async(async () => {
@@ -195,7 +195,7 @@ export class KIO<S extends object, E, A> {
    * @param success - Function to handle success case
    * @param failure - Function to handle failure case
    * @returns An effect with the transformed result
-   * 
+   *
    * @example
    * ```typescript
    * const kio = KIO.getRecord({ app: 1, id: 1 })
@@ -223,7 +223,7 @@ export class KIO<S extends object, E, A> {
    * @template B - The new success value type
    * @param f - Function to handle the error
    * @returns An effect that handles the error case
-   * 
+   *
    * @example
    * ```typescript
    * const kio = KIO.getRecord({ app: 1, id: 1 })
@@ -241,7 +241,7 @@ export class KIO<S extends object, E, A> {
    * @template B - The new success value type
    * @param f - Function to transform the current result into a new KIO operation
    * @returns An effect that chains the operations
-   * 
+   *
    * @example
    * ```typescript
    * const kio = KIO.succeed(1)
@@ -261,7 +261,7 @@ export class KIO<S extends object, E, A> {
    * @param name - The name to give to the intermediate result
    * @param f - Function to transform the current result into a new KIO operation
    * @returns An effect that chains the operations and names the intermediate result
-   * 
+   *
    * @example
    * ```typescript
    * const kio = KIO.succeed(1)
@@ -300,7 +300,7 @@ export class KIO<S extends object, E, A> {
    * @template B - The new success value type
    * @param f - Function to transform the current result
    * @returns An effect with the transformed result
-   * 
+   *
    * @example
    * ```typescript
    * const kio = KIO.succeed(1)
@@ -316,7 +316,7 @@ export class KIO<S extends object, E, A> {
    * @param name - The name to give to the result
    * @param f - Function to transform the current result
    * @returns An effect with the named and transformed result
-   * 
+   *
    * @example
    * ```typescript
    * const kio = KIO.succeed(1)
@@ -349,7 +349,7 @@ export class KIO<S extends object, E, A> {
    * Applies a retry policy to a KIO operation.
    * @param policy - The retry policy to apply
    * @returns An effect that will retry on failure according to the policy
-   * 
+   *
    * @example
    * ```typescript
    * const kio = KIO.getRecord({ app: 1, id: 1 })
@@ -375,7 +375,7 @@ export class KIO<S extends object, E, A> {
    * @template R - The record type
    * @param args - The arguments for getting the record
    * @returns An effect that will get the record
-   * 
+   *
    * @example
    * ```typescript
    * const kio = KIO.getRecord({ app: 1, id: 1 });
@@ -393,7 +393,7 @@ export class KIO<S extends object, E, A> {
    * @template R - The record type
    * @param args - The arguments for getting the records
    * @returns An effect that will get the records
-   * 
+   *
    * @example
    * ```typescript
    * const kio = KIO.getRecords({
@@ -415,7 +415,7 @@ export class KIO<S extends object, E, A> {
    * @template R - The record type
    * @param args - The arguments for adding the record
    * @returns An effect that will add the record when committed
-   * 
+   *
    * @example
    * ```typescript
    * const kio = KIO.addRecord({
@@ -443,7 +443,7 @@ export class KIO<S extends object, E, A> {
    * @template R - The record type
    * @param args - The arguments for adding the records
    * @returns An effect that will add the records when committed
-   * 
+   *
    * @example
    * ```typescript
    * const kio = KIO.addRecords({
@@ -474,7 +474,7 @@ export class KIO<S extends object, E, A> {
    * @template R - The record type
    * @param args - The arguments for updating the record
    * @returns An effect that will update the record when committed
-   * 
+   *
    * @example
    * ```typescript
    * const kio = KIO.getRecord({ app: 1, id: 1 })
@@ -501,13 +501,13 @@ export class KIO<S extends object, E, A> {
    * @template R - The record type
    * @param args - The arguments for updating the records
    * @returns An effect that will update the records when committed
-   * 
+   *
    * @example
    * ```typescript
    * const kio = KIO.getRecords({ app: 1 })
    *   .andThen((records) => {
    *     // Update the record content using the update method
-   *     const updatedRecords = records.map(record => 
+   *     const updatedRecords = records.map(record =>
    *       record.update({ status: "Updated" })
    *     );
    *     return KIO.updateRecords({ records: updatedRecords });
@@ -530,7 +530,7 @@ export class KIO<S extends object, E, A> {
    * @template R - The record type
    * @param args - The arguments for deleting the record
    * @returns An effect that will delete the record when committed
-   * 
+   *
    * @example
    * ```typescript
    * const kio = KIO.deleteRecord({
@@ -554,7 +554,7 @@ export class KIO<S extends object, E, A> {
    * @template R - The record type
    * @param args - The arguments for deleting the records
    * @returns An effect that will delete the records when committed
-   * 
+   *
    * @example
    * ```typescript
    * const kio = KIO.deleteRecords({
@@ -577,7 +577,7 @@ export class KIO<S extends object, E, A> {
    * Commits all pending changes to kintone. This is required to execute any add, update, or delete operations.
    * Multiple write operations can be stacked and will be executed together when commit is called.
    * @returns An effect that will commit all pending changes
-   * 
+   *
    * @example
    * ```typescript
    * // Stack multiple operations and commit them together
@@ -591,19 +591,5 @@ export class KIO<S extends object, E, A> {
    */
   static commit(): KIO<object, KError, void> {
     return new KIO({ kind: "Commit" });
-  }
-
-  /**
-   * Executes the effect using the provided runner.
-   * @param runner - The runner to execute the effect
-   * @returns A promise that resolves to the effect result
-   * 
-   * @example
-   * ```typescript
-   * const result = await KIO.succeed(42).run(runner);
-   * ```
-   */
-  async run(runner: KIORunner): Promise<A> {
-    return runner.run(this.kioa);
   }
 }
