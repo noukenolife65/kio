@@ -1,20 +1,20 @@
 import { describe, expect, it, onTestFinished } from "vitest";
-import { KIO } from "./kio.ts";
-import { Either, Right } from "./either.ts";
+import { KIO } from "../kio.ts";
+import { Either, Right } from "../either.ts";
 import {
   BulkRequestResponse,
   GetRecordResponse,
   GetRecordsResponse,
   KintoneClient,
-} from "./client.ts";
-import { _KFields, KError, KRecord } from "./data.ts";
+} from "../client.ts";
+import { _KFields, KError, KRecord } from "../data.ts";
 import { KintoneRestAPIClient } from "@kintone/rest-api-client";
-import { KVPairs } from "./helper.ts";
-import { createRunner, PromiseRunner } from "./runner/promise/runner.ts";
+import { KVPairs } from "../helper.ts";
+import { createRunner, PromiseRunner } from "./promise/runner.ts";
 import SavedFields = kintone.types.SavedFields;
 import Fields = kintone.types.Fields;
 
-describe("KIORunnerImpl", () => {
+describe("PromiseRunner", () => {
   describe("run", () => {
     describe("Basic Operations", () => {
       class FakeKintoneClient implements KintoneClient {
@@ -50,8 +50,7 @@ describe("KIORunnerImpl", () => {
       });
       it("Fail", async () => {
         try {
-          const kio = KIO.fail("error")
-            .map(() => expect.fail());
+          const kio = KIO.fail("error").map(() => expect.fail());
           await runner.run(kio);
           expect.fail("should throw error");
         } catch (error) {
@@ -135,8 +134,7 @@ describe("KIORunnerImpl", () => {
         expect(result).toBe(3);
       });
       it("Catch", async () => {
-        const kio = KIO.fail("error")
-          .catch(() => KIO.succeed(1));
+        const kio = KIO.fail("error").catch(() => KIO.succeed(1));
         const result = await runner.run(kio);
         expect(result).toBe(1);
       });
@@ -286,8 +284,9 @@ describe("KIORunnerImpl", () => {
             text: { value: `test_${new Date().toTimeString()}` },
           };
           // When
-          const kio = KIO.addRecord({ app, record })
-            .andThen(() => KIO.commit());
+          const kio = KIO.addRecord({ app, record }).andThen(() =>
+            KIO.commit(),
+          );
           await runner.run(kio);
           // Then
           const savedRecords = await kClient.record.getAllRecords<
@@ -303,8 +302,7 @@ describe("KIORunnerImpl", () => {
           const kio = KIO.addRecord({
             app,
             record: { invalidField: { value: "" } },
-          })
-            .andThen(() => KIO.commit());
+          }).andThen(() => KIO.commit());
           try {
             await runner.run(kio);
             expect.fail("should throw error");
@@ -327,8 +325,9 @@ describe("KIORunnerImpl", () => {
             { text: { value: `test_${new Date().toTimeString()}` } },
           ];
           // When
-          const kio = KIO.addRecords({ app, records })
-            .andThen(() => KIO.commit());
+          const kio = KIO.addRecords({ app, records }).andThen(() =>
+            KIO.commit(),
+          );
           await runner.run(kio);
           // Then
           const savedRecords = await kClient.record.getAllRecords<
@@ -344,8 +343,7 @@ describe("KIORunnerImpl", () => {
           const kio = KIO.addRecords({
             app,
             records: [{ invalidField: { value: "" } }],
-          })
-            .andThen(() => KIO.commit());
+          }).andThen(() => KIO.commit());
           try {
             await runner.run(kio);
             expect.fail("should throw error");
