@@ -184,7 +184,7 @@ export class KIO<S extends object, E, A> {
    * });
    * ```
    */
-  static async<A, E = unknown>(f: () => Promise<A>): KIO<object, E, A> {
+  static async<A>(f: () => Promise<A>): KIO<object, never, A> {
     return new KIO({ kind: "Async", f });
   }
 

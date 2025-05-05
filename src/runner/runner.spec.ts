@@ -62,7 +62,7 @@ describe("PromiseRunner", () => {
         const success = await runner.run(kio);
         expect(success).toBe(1);
         try {
-          const kio = KIO.async<never, string>(async () => {
+          const kio = KIO.async(async () => {
             throw "error";
           });
           await runner.run(kio);
