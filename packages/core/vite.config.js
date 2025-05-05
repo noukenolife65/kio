@@ -6,6 +6,7 @@ export default defineConfig({
     target: "es2016",
     lib: {
       entry: "src/index.ts",
+      fileName: "index",
       formats: ["es", "cjs"],
     },
     rollupOptions: {

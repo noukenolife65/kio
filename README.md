@@ -15,7 +15,7 @@ A TypeScript library designed to simplify Kintone API operations with transactio
 
 ```bash
 # Install the library
-npm install kio
+npm install @kio/core
 ```
 
 ## Usage Examples

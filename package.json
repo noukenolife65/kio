@@ -2,21 +2,14 @@
   "name": "kio",
   "private": true,
   "version": "0.0.0",
-  "type": "module",
-  "main": "dist/kio.cjs",
-  "module": "dist/kio.js",
-  "types": "dist/index.d.ts",
-  "files": [
-    "dist"
+  "workspaces": [
+    "packages/*"
   ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "test": "vitest",
-    "lint": "eslint",
-    "prepare": "npm run build",
-    "typedoc": "typedoc --options typedoc.json"
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "typedoc": "npm run typedoc --workspaces"
   },
   "engines": {
     "node": ">=18"
@@ -36,8 +29,5 @@
     "vite": "^6.0.5",
     "vite-plugin-dts": "^4.5.3",
     "vitest": "^3.0.8"
-  },
-  "peerDependencies": {
-    "@kintone/rest-api-client": "^5.6.0"
   }
 }
