@@ -19,7 +19,7 @@ export type KIOS<T extends string, A> = {
 };
 
 /**
- * Arguments for getting a single record from kintone
+ * Arguments for getting a single record from Kintone
  */
 type GetRecordArgs = {
   /** The app ID */
@@ -29,7 +29,7 @@ type GetRecordArgs = {
 };
 
 /**
- * Arguments for getting multiple records from kintone
+ * Arguments for getting multiple records from Kintone
  */
 type GetRecordsArgs = {
   /** The app ID */
@@ -104,7 +104,7 @@ export type KIOA<E, A> =
     };
 
 /**
- * A functional programming interface for kintone operations.
+ * A functional programming interface for Kintone operations.
  * @template S - The state type
  * @template E - The error type
  * @template A - The success value type
@@ -371,7 +371,7 @@ export class KIO<S extends object, E, A> {
   }
 
   /**
-   * Gets a single record from kintone.
+   * Gets a single record from Kintone.
    * @template R - The record type
    * @param args - The arguments for getting the record
    * @returns An effect that will get the record
@@ -389,7 +389,7 @@ export class KIO<S extends object, E, A> {
   }
 
   /**
-   * Gets multiple records from kintone.
+   * Gets multiple records from Kintone.
    * @template R - The record type
    * @param args - The arguments for getting the records
    * @returns An effect that will get the records
@@ -411,7 +411,7 @@ export class KIO<S extends object, E, A> {
   }
 
   /**
-   * Adds a new record to kintone. The operation won't be executed until commit is called.
+   * Adds a new record to Kintone. The operation won't be executed until commit is called.
    * @template R - The record type
    * @param args - The arguments for adding the record
    * @returns An effect that will add the record when committed
@@ -439,7 +439,7 @@ export class KIO<S extends object, E, A> {
   }
 
   /**
-   * Adds multiple records to kintone. The operations won't be executed until commit is called.
+   * Adds multiple records to Kintone. The operations won't be executed until commit is called.
    * @template R - The record type
    * @param args - The arguments for adding the records
    * @returns An effect that will add the records when committed
@@ -470,7 +470,7 @@ export class KIO<S extends object, E, A> {
   }
 
   /**
-   * Updates an existing record in kintone. The operation won't be executed until commit is called.
+   * Updates an existing record in Kintone. The operation won't be executed until commit is called.
    * @template R - The record type
    * @param args - The arguments for updating the record
    * @returns An effect that will update the record when committed
@@ -497,7 +497,7 @@ export class KIO<S extends object, E, A> {
   }
 
   /**
-   * Updates multiple records in kintone. The operations won't be executed until commit is called.
+   * Updates multiple records in Kintone. The operations won't be executed until commit is called.
    * @template R - The record type
    * @param args - The arguments for updating the records
    * @returns An effect that will update the records when committed
@@ -526,7 +526,7 @@ export class KIO<S extends object, E, A> {
   }
 
   /**
-   * Deletes a record from kintone. The operation won't be executed until commit is called.
+   * Deletes a record from Kintone. The operation won't be executed until commit is called.
    * @template R - The record type
    * @param args - The arguments for deleting the record
    * @returns An effect that will delete the record when committed
@@ -550,7 +550,7 @@ export class KIO<S extends object, E, A> {
   }
 
   /**
-   * Deletes multiple records from kintone. The operations won't be executed until commit is called.
+   * Deletes multiple records from Kintone. The operations won't be executed until commit is called.
    * @template R - The record type
    * @param args - The arguments for deleting the records
    * @returns An effect that will delete the records when committed
@@ -574,7 +574,7 @@ export class KIO<S extends object, E, A> {
   }
 
   /**
-   * Commits all pending changes to kintone. This is required to execute any add, update, or delete operations.
+   * Commits all pending changes to Kintone. This is required to execute any add, update, or delete operations.
    * Multiple write operations can be stacked and will be executed together when commit is called.
    * @returns An effect that will commit all pending changes
    *
