@@ -1,13 +1,13 @@
-# KIO (kintone IO) - Proof of Concept
+# KIO - Proof of Concept
 
-A TypeScript library designed to simplify kintone API operations with transactional support, retry mechanisms, and functional error handling.
+A TypeScript library designed to simplify Kintone API operations with transactional support, retry mechanisms, and functional error handling.
 
 ## Features
 
-- Implements unit of work pattern, using kintone bulk request for transactional support
+- Implements unit of work pattern, using Kintone bulk request for transactional support
 - Provides a retry mechanism with configurable policies (e.g., recursive retries)
 - Supports error handling operations
-- Offers CRUD operations for kintone records (create, read, update, delete)
+- Offers CRUD operations for Kintone records (create, read, update, delete)
 
 ## Prerequisites
 
@@ -26,3 +26,8 @@ npm install kio
 
 ## Future Plans
 
+## Legal Notice
+
+Kintone® is a registered trademark of Cybozu, Inc.  
+This project is not affiliated with or endorsed by Cybozu, Inc.  
+"Kintone" is used in this project solely to describe compatibility with the Kintone platform.
