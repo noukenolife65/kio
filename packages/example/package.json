@@ -1,0 +1,21 @@
+{
+  "name": "@kio/example",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "start": "vite-node src/index.ts",
+    "build": "dotenvx run -- tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint",
+    "kgen": "dotenvx run -- kintone-dts-gen"
+  },
+  "devDependencies": {
+    "@dotenvx/dotenvx": "^1.39.0",
+    "vite-node": "^3.0.9"
+  },
+  "dependencies": {
+    "@kio/core": "^0.0.0"
+  }
+}

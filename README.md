@@ -11,11 +11,36 @@ A TypeScript library designed to simplify Kintone API operations with transactio
 
 ## Prerequisites
 
+- Node.js >= 18
+
 ## Installation
 
 ```bash
-# Install the library
-npm install kio
+# Install the core package
+npm install @kio/core
+```
+
+## Project Structure
+
+This is a monorepo containing the following packages:
+
+- `@kio/core`: Core library for Kintone API operations
+- More packages coming soon...
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Build all packages
+npm run build
+
+# Run tests
+npm run test
+
+# Generate documentation
+npm run typedoc
 ```
 
 ## Usage Examples
