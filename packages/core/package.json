@@ -1,13 +1,16 @@
 {
   "name": "@kio/core",
-  "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "A TypeScript library designed to simplify Kintone API operations with transactional support, retry mechanisms, and functional error handling",
+  "private": false,
   "type": "module",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "dev": "vite",
@@ -20,5 +23,30 @@
   },
   "peerDependencies": {
     "@kintone/rest-api-client": "^5.6.0"
+  },
+  "keywords": [
+    "kintone",
+    "typescript",
+    "api",
+    "transaction",
+    "retry",
+    "error-handling"
+  ],
+  "author": {
+    "name": "noukenolife65",
+    "email": "todo@example.com",
+    "url": "https://github.com/noukenolife65/kio"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noukenolife65/kio.git"
+  },
+  "bugs": {
+    "url": "https://github.com/noukenolife65/kio/issues"
+  },
+  "homepage": "https://github.com/noukenolife65/kio",
+  "publishConfig": {
+    "access": "public"
   }
 }
