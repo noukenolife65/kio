@@ -1,6 +1,10 @@
-# KIO - Proof of Concept
+# KIO
 
 A TypeScript library designed to simplify Kintone API operations with transactional support, retry mechanisms, and functional error handling.
+
+> ⚠️ **WARNING: This is a Proof of Concept (PoC)**
+> 
+> This library is currently in the experimental stage and is not recommended for use in production environments. It is provided as-is without any guarantees of stability, security, or support. Use at your own risk.
 
 ## Features
 
