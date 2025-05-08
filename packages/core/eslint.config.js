@@ -11,4 +11,9 @@ export default [
   ...tseslint.configs.recommended,
   prettier,
   { ignores: ["dist", "coverage", "docs"] },
+  {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off"
+    }
+  }
 ];

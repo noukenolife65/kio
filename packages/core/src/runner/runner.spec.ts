@@ -138,6 +138,29 @@ describe("PromiseRunner", () => {
         const result = await runner.run(kio);
         expect(result).toBe(1);
       });
+      it("Gen", async () => {
+        const kio1 = KIO.gen(function* () {
+          const a = yield* KIO.succeed(1);
+          const b = yield* KIO.succeed("2");
+          return a + parseInt(b);
+        });
+        const result1 = await runner.run(kio1);
+        expect(result1).toBe(3);
+
+        const kio2 = KIO.gen(function* () {
+          const a = yield* KIO.succeed(1);
+          yield* KIO.fail("error");
+          const b = yield* KIO.succeed("2");
+          yield* KIO.fail(1);
+          return a + parseInt(b);
+        });
+        try {
+          await runner.run(kio2);
+          expect.fail("should throw error");
+        } catch (error) {
+          expect(error).toBe("error");
+        }
+      });
     });
     describe("Kintone Operations", () => {
       const app = 1;

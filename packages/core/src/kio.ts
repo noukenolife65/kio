@@ -114,7 +114,7 @@ export type KIOA<E, A> =
  * // Basic usage
  * const kio = KIO.getRecord({ app: 1, id: 1 })
  *   .andThen("record", (record) => KIO.updateRecord({ record: { ...record, title: "Updated" } }));
- * 
+ *
  * const result = await runner.run(kio);
  * ```
  */
@@ -371,6 +371,39 @@ export class KIO<S extends object, E, A> {
   }
 
   /**
+   * Creates an effect from a generator function.
+   * @template K - The type of KIO operations yielded by the generator
+   * @template A - The type of the final value
+   * @param f - The generator function that yields KIO operations
+   * @returns An effect that will execute the generator's operations in sequence
+   *
+   * @example
+   * ```typescript
+   * const kio = KIO.gen(function* () {
+   *   const record1 = yield KIO.getRecord({ app: 1, id: 1 });
+   *   const record2 = yield KIO.getRecord({ app: 1, id: 2 });
+   *   return [record1, record2];
+   * });
+   * ```
+   */
+  static gen<K extends KIO<any, any, any>, A>(
+    f: () => Generator<K, A>,
+  ): KIO<object, K extends KIO<any, infer E, any> ? E : never, A> {
+    const loop = (
+      itr: Generator<K, A>,
+      a?: any,
+    ): KIO<object, K extends KIO<any, infer E, any> ? E : never, A> => {
+      const next = itr.next(a);
+      if (next.done) {
+        return KIO.succeed(next.value);
+      } else {
+        return next.value.andThen((a) => loop(itr, a));
+      }
+    };
+    return loop(f());
+  }
+
+  /**
    * Gets a single record from Kintone.
    * @template R - The record type
    * @param args - The arguments for getting the record
@@ -592,4 +625,10 @@ export class KIO<S extends object, E, A> {
   static commit(): KIO<object, KError, void> {
     return new KIO({ kind: "Commit" });
   }
+
+  [Symbol.iterator]: () => Iterator<KIO<S, E, A>, A> = function* (
+    this: KIO<S, E, A>,
+  ) {
+    return yield this;
+  };
 }
