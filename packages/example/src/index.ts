@@ -1,5 +1,5 @@
 import { KintoneRestAPIClient } from "@kintone/rest-api-client";
-import { addTask } from "./addTask.ts";
+import { addTask } from "./directStyle/addTask.ts";
 import { createRunner, KIO } from "@kio/core";
 
 const client = new KintoneRestAPIClient({

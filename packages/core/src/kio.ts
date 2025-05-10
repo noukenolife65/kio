@@ -400,7 +400,7 @@ export class KIO<S extends object, E, A> {
         return next.value.andThen((a) => loop(itr, a));
       }
     };
-    return loop(f());
+    return KIO.start().andThen(() => loop(f()));
   }
 
   /**
