@@ -58,6 +58,14 @@ export class Interpreter<F extends URIS> {
             this.run(bulkRequests1, s1, kioa.success(a1, s1)),
         );
       }
+      case "ForEach": {
+        return F.flatMap(
+          F.forEach(kioa.itr, (a) => this.run([], {}, kioa.f(a))),
+          (results) => {
+            return F.succeed([[], {}, results.map(([, , b]) => b)]);
+          },
+        );
+      }
       case "GetRecord": {
         const getRecord = F.async(() =>
           this.client.getRecord({

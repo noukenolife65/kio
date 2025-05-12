@@ -13,4 +13,8 @@ export interface Effect<F extends URIS> {
     failure: (e: E1) => Type<F, E2, B>,
     success: (a: A) => Type<F, E2, B>,
   ) => Type<F, E2, B>;
+  forEach: <E, A, B>(
+    itr: Iterable<A>,
+    f: (a: A) => Type<F, E, B>,
+  ) => Type<F, E, B[]>;
 }

@@ -46,4 +46,19 @@ export const promiseEither: Effect<URI> = {
         }
       })();
     }),
+  forEach: async <E, A, B>(
+    itr: Iterable<A>,
+    f: (a: A) => Promise<Either<E, B>>,
+  ): Promise<Either<E, B[]>> => {
+    const bs: B[] = [];
+    for (const a of itr) {
+      const result = await f(a);
+      if (result.kind === "Left") {
+        return result;
+      } else {
+        bs.push(result.value);
+      }
+    }
+    return new Right(bs);
+  },
 };

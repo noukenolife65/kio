@@ -161,6 +161,29 @@ describe("PromiseRunner", () => {
           expect(error).toBe("error");
         }
       });
+      describe("ForEach", () => {
+        it("should successfully transform each element", async () => {
+          const kio = KIO.forEach([1, 2, 3], (n) => KIO.succeed(n * 2));
+          const result = await runner.run(kio);
+          expect(Array.from(result)).toEqual([2, 4, 6]);
+        });
+        it("should handle empty array", async () => {
+          const kio = KIO.forEach([], (n) => KIO.succeed(n * 2));
+          const result = await runner.run(kio);
+          expect(Array.from(result)).toEqual([]);
+        });
+        it("should fail when any element fails", async () => {
+          try {
+            const kio = KIO.forEach([1, 2, 3], (n) => 
+              n === 2 ? KIO.fail("error") : KIO.succeed(n * 2)
+            );
+            await runner.run(kio);
+            expect.fail("should throw error");
+          } catch (error) {
+            expect(error).toBe("error");
+          }
+        });
+      });
     });
     describe("Kintone Operations", () => {
       const app = 1;
