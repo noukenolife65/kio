@@ -21,7 +21,7 @@
     "noUncheckedSideEffectImports": true
   },
   "files" : [
-    "./node_modules/@kintone/dts-gen/kintone.d.ts",
+    "../../node_modules/@kintone/dts-gen/kintone.d.ts",
   ],
   "include": ["src"]
 }
