@@ -74,16 +74,9 @@ describe("PromiseRunner", () => {
       it("AndThen", async () => {
         const kio = KIO.succeed(1)
           .andThen((a) => KIO.succeed(a + 1))
-          .andThen("andThen", (a) => KIO.succeed(a + 1))
+          .andThen((a) => KIO.succeed(a + 1))
           .map((a) => a + 1)
-          .map("map", (a) => a + 1)
-          .map((a, s) => {
-            expect(s).toStrictEqual({
-              andThen: 3,
-              map: 5,
-            });
-            return a;
-          });
+          .map((a) => a + 1);
         const success = await runner.run(kio);
         expect(success).toBe(5);
 
@@ -99,22 +92,20 @@ describe("PromiseRunner", () => {
       });
       it("Fold", async () => {
         const kio = KIO.start()
-          .andThen("value", () => KIO.succeed(1))
+          .andThen(() => KIO.succeed(1))
           .andThen(() => KIO.fail("error"))
           .fold(
             () => {
               expect.fail("should not be called");
             },
-            (e, s) => {
+            (e) => {
               expect(e).toBe("error");
-              expect(s).toStrictEqual({ value: 1 });
               return KIO.succeed(2);
             },
           )
           .fold(
-            (a, s) => {
+            (a) => {
               expect(a).toStrictEqual(2);
-              expect(s).toStrictEqual({ value: 1 });
               return KIO.succeed(undefined);
             },
             () => {
@@ -552,14 +543,14 @@ describe("PromiseRunner", () => {
           cleanUp();
           // When
           const kio = KIO.succeed({ text: { value: "test" } })
-            .andThen("newRecord", (a) =>
+            .andThen((a) =>
               KIO.addRecord({
                 app,
                 record: a,
               }),
             )
             .andThen(() => KIO.commit())
-            .andThen("savepoint1", () => KIO.getRecords({ app }))
+            .andThen(() => KIO.getRecords({ app }))
             .map((a) => {
               return a.map((record) =>
                 record.update((value) => ({
@@ -575,9 +566,9 @@ describe("PromiseRunner", () => {
               return KIO.deleteRecord({ record });
             })
             .andThen(() => KIO.commit())
-            .andThen("savepoint2", () => KIO.getRecords({ app }))
-            .map((_a, s) => {
-              expect(s.savepoint2).toHaveLength(0);
+            .andThen(() => KIO.getRecords({ app }))
+            .map((a) => {
+              expect(a).toHaveLength(0);
             });
           await runner.run(kio);
         });
@@ -592,16 +583,17 @@ describe("PromiseRunner", () => {
               }),
             )
             .andThen(() => KIO.commit())
-            .andThen("savepoint1", () => KIO.getRecords({ app }))
-            .andThen((_, s) =>
-              KIO.updateRecord({
-                record: s.savepoint1[0]!.update((value) => ({
+            .andThen(() => KIO.getRecords({ app }))
+            .andThen((records) => {
+              const record = records[0]!;
+              return KIO.updateRecord({
+                record: record.update((value) => ({
                   ...value,
                   text: { value: "updated" },
                 })),
-              }),
-            )
-            .andThen((_, s) => KIO.deleteRecord({ record: s.savepoint1[0]! }))
+              });
+            })
+            .andThen(() => KIO.fail("error"))
             .andThen(() => KIO.commit());
           try {
             await runner.run(kio);

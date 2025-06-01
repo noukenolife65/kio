@@ -13,14 +13,14 @@ export class PromiseRunner implements KIORunner<PromiseURI> {
     this.interpreter = new Interpreter(promiseEither, client);
   }
 
-  async run<S extends object, E, A>(kio: KIO<S, E, A>): Promise<A> {
-    const result = await this.interpreter.run([], {}, kio.kioa);
+  async run<E, A>(kio: KIO<E, A>): Promise<A> {
+    const result = await this.interpreter.run([], kio.kioa);
     return (() => {
       switch (result.kind) {
         case "Left":
-          throw result.value[1] as E;
+          throw result.value as E;
         case "Right":
-          return result.value[2] as A;
+          return result.value[1] as A;
       }
     })();
   }

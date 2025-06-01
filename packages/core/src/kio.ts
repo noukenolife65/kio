@@ -48,9 +48,8 @@ type GetRecordsArgs = {
 export type KIOA<E, A> =
   | {
       kind: "AndThen";
-      name?: string;
       self: KIOA<unknown, unknown>;
-      f: (a: unknown, s: unknown) => KIOA<E, A>;
+      f: (a: unknown) => KIOA<E, A>;
     }
   | { kind: "Succeed"; value: A }
   | { kind: "Fail"; error: E }
@@ -61,8 +60,8 @@ export type KIOA<E, A> =
   | {
       kind: "Fold";
       self: KIOA<unknown, unknown>;
-      success: (a: unknown, s: unknown) => KIOA<E, A>;
-      failure: (e: unknown, s: unknown) => KIOA<E, A>;
+      success: (a: unknown) => KIOA<E, A>;
+      failure: (e: unknown) => KIOA<E, A>;
     }
   | {
       kind: "ForEach";
@@ -110,7 +109,6 @@ export type KIOA<E, A> =
 
 /**
  * A functional programming interface for Kintone operations.
- * @template S - The state type
  * @template E - The error type
  * @template A - The success value type
  *
@@ -118,12 +116,12 @@ export type KIOA<E, A> =
  * ```typescript
  * // Basic usage
  * const kio = KIO.getRecord({ app: 1, id: 1 })
- *   .andThen("record", (record) => KIO.updateRecord({ record: { ...record, title: "Updated" } }));
+ *   .andThen((record) => KIO.updateRecord({ record: { ...record, title: "Updated" } }));
  *
  * const result = await runner.run(kio);
  * ```
  */
-export class KIO<S extends object, E, A> {
+export class KIO<E, A> {
   readonly kioa: KIOA<E, A>;
 
   /** @private */
@@ -140,7 +138,7 @@ export class KIO<S extends object, E, A> {
    * const kio = KIO.start();
    * ```
    */
-  static start(): KIO<object, never, void> {
+  static start(): KIO<never, void> {
     return new KIO({ kind: "Succeed", value: undefined });
   }
 
@@ -155,7 +153,7 @@ export class KIO<S extends object, E, A> {
    * const kio = KIO.succeed(42);
    * ```
    */
-  static succeed<A>(a: A): KIO<object, never, A> {
+  static succeed<A>(a: A): KIO<never, A> {
     return new KIO({ kind: "Succeed", value: a });
   }
 
@@ -170,7 +168,7 @@ export class KIO<S extends object, E, A> {
    * const kio = KIO.fail(new Error("Something went wrong"));
    * ```
    */
-  static fail<E>(e: E): KIO<object, E, never> {
+  static fail<E>(e: E): KIO<E, never> {
     return new KIO({ kind: "Fail", error: e });
   }
 
@@ -189,7 +187,7 @@ export class KIO<S extends object, E, A> {
    * });
    * ```
    */
-  static async<A>(f: () => Promise<A>): KIO<object, never, A> {
+  static async<A>(f: () => Promise<A>): KIO<never, A> {
     return new KIO({ kind: "Async", f });
   }
 
@@ -211,14 +209,14 @@ export class KIO<S extends object, E, A> {
    * ```
    */
   fold<E1, B>(
-    success: (a: A, s: S) => KIO<object, E1, B>,
-    failure: (e: E, s: S) => KIO<object, E1, B>,
-  ): KIO<S, E1, B> {
+    success: (a: A) => KIO<E1, B>,
+    failure: (e: E) => KIO<E1, B>,
+  ): KIO<E1, B> {
     return new KIO({
       kind: "Fold",
       self: this.kioa,
-      success: (a, s) => success(a as A, s as S).kioa,
-      failure: (e, s) => failure(e as E, s as S).kioa,
+      success: (a) => success(a as A).kioa,
+      failure: (e) => failure(e as E).kioa,
     });
   }
 
@@ -235,13 +233,12 @@ export class KIO<S extends object, E, A> {
    *   .catch((error) => KIO.succeed({ error: "Record not found" }));
    * ```
    */
-  catch<E1, B>(f: (e: E, s: S) => KIO<object, E1, B>): KIO<S, E1, A | B> {
+  catch<E1, B>(f: (e: E) => KIO<E1, B>): KIO<E1, A | B> {
     return this.fold<E1, A | B>((a) => KIO.succeed(a), f);
   }
 
   /**
-   * Chains KIO operations together, with optional naming of intermediate results.
-   * @template S1 - The new state type
+   * Chains KIO operations together.
    * @template E1 - The new error type
    * @template B - The new success value type
    * @param f - Function to transform the current result into a new KIO operation
@@ -254,54 +251,18 @@ export class KIO<S extends object, E, A> {
    *   .andThen((a) => KIO.succeed(a * 2));
    * ```
    */
-  andThen<S1 extends object, E1, B>(
-    f: (a: A, s: S) => KIO<S1, E1, B>,
-  ): KIO<S, E | E1, B>;
-  /**
-   * Chains KIO operations together, with optional naming of intermediate results.
-   * @template N - The name type for the intermediate result
-   * @template S1 - The new state type
-   * @template E1 - The new error type
-   * @template B - The new success value type
-   * @param name - The name to give to the intermediate result
-   * @param f - Function to transform the current result into a new KIO operation
-   * @returns An effect that chains the operations and names the intermediate result
-   *
-   * @example
-   * ```typescript
-   * const kio = KIO.succeed(1)
-   *   .andThen("x", (a) => KIO.succeed(a + 1))
-   *   .andThen("y", (a, s) => KIO.succeed(s.x + 1));
-   * ```
-   */
-  andThen<N extends string, S1 extends object, E1, B>(
-    name: N,
-    f: (a: A, s: S) => KIO<S1, E1, B>,
-  ): KIO<S & KIOS<N, B>, E | E1, B>;
-  andThen<N extends string, S1 extends object, E1, B>(
-    nameOrF: N | ((a: A, s: S) => KIO<S1, E1, B>),
-    f?: (a: A, s: S) => KIO<S1, E1, B>,
-  ): KIO<S, E | E1, B> | KIO<S & KIOS<N, B>, E | E1, B> {
-    if (arguments.length === 1 && typeof nameOrF === "function") {
-      return new KIO({
-        kind: "AndThen",
-        self: this.kioa,
-        f: (a, s) => nameOrF(a as A, s as S).kioa,
-      });
-    } else if (arguments.length === 2 && typeof nameOrF === "string") {
-      return new KIO({
-        kind: "AndThen",
-        name: nameOrF,
-        self: this.kioa,
-        f: (a, s) => f!(a as A, s as S).kioa,
-      });
-    } else {
-      throw new Error("Invalid arguments");
-    }
+  andThen<E1, B>(
+    f: (a: A) => KIO<E1, B>,
+  ): KIO<E | E1, B> {
+    return new KIO({
+      kind: "AndThen",
+      self: this.kioa,
+      f: (a) => f(a as A).kioa,
+    });
   }
 
   /**
-   * Transforms the result of a KIO operation, with optional naming of the result.
+   * Transforms the result of a KIO operation.
    * @template B - The new success value type
    * @param f - Function to transform the current result
    * @returns An effect with the transformed result
@@ -313,41 +274,10 @@ export class KIO<S extends object, E, A> {
    *   .map((a) => a * 2);
    * ```
    */
-  map<B>(f: (a: A, s: S) => B): KIO<S, E, B>;
-  /**
-   * Transforms the result of a KIO operation, with optional naming of the result.
-   * @template N - The name type for the result
-   * @template B - The new success value type
-   * @param name - The name to give to the result
-   * @param f - Function to transform the current result
-   * @returns An effect with the named and transformed result
-   *
-   * @example
-   * ```typescript
-   * const kio = KIO.succeed(1)
-   *   .map("x", (a) => a + 1)
-   *   .map("y", (a, s) => s.x + 1);
-   * ```
-   */
-  map<N extends string, B>(
-    name: N,
-    f: (a: A, s: S) => B,
-  ): KIO<S & KIOS<N, B>, E, B>;
-  map<N extends string, B>(
-    nameOrF: N | ((a: A, s: S) => B),
-    f?: (a: A, s: S) => B,
-  ): KIO<S, E, B> | KIO<S & KIOS<N, B>, E, B> {
-    if (arguments.length === 1 && typeof nameOrF === "function") {
-      return this.andThen((a, s) => {
-        return new KIO({ kind: "Succeed", value: nameOrF(a, s) });
-      });
-    } else if (arguments.length === 2 && typeof nameOrF === "string") {
-      return this.andThen(nameOrF, (a, s) => {
-        return new KIO({ kind: "Succeed", value: f!(a, s) });
-      });
-    } else {
-      throw new Error("Invalid arguments");
-    }
+  map<B>(
+    f: (a: A) => B,
+  ): KIO<E, B> {
+    return this.andThen((a) => KIO.succeed(f(a)));
   }
 
   /**
@@ -361,12 +291,12 @@ export class KIO<S extends object, E, A> {
    *   .retry({ kind: "Recurs", times: 3 });
    * ```
    */
-  retry(policy: RetryPolicy): KIO<S, E, A> {
+  retry(policy: RetryPolicy): KIO<E, A> {
     return (() => {
       switch (policy.kind) {
         case "Recurs": {
           const { times } = policy;
-          const loop = (n: number): KIO<S, E, A> => {
+          const loop = (n: number): KIO<E, A> => {
             return this.catch((e) => (n === 0 ? KIO.fail(e) : loop(n - 1)));
           };
           return loop(times);
@@ -391,13 +321,13 @@ export class KIO<S extends object, E, A> {
    * });
    * ```
    */
-  static gen<K extends KIO<any, any, any>, A>(
+  static gen<K extends KIO<any, any>, A>(
     f: () => Generator<K, A>,
-  ): KIO<object, K extends KIO<any, infer E, any> ? E : never, A> {
+  ): KIO<K extends KIO<infer E, any> ? E : never, A> {
     const loop = (
       itr: Generator<K, A>,
       a?: any,
-    ): KIO<object, K extends KIO<any, infer E, any> ? E : never, A> => {
+    ): KIO<K extends KIO<infer E, any> ? E : never, A> => {
       const next = itr.next(a);
       if (next.done) {
         return KIO.succeed(next.value);
@@ -410,8 +340,8 @@ export class KIO<S extends object, E, A> {
 
   static forEach<E, A, B>(
     itr: Iterable<A>,
-    f: (a: A) => KIO<object, E, B>,
-  ): KIO<object, E, Iterable<B>> {
+    f: (a: A) => KIO<E, B>,
+  ): KIO<E, Iterable<B>> {
     return new KIO({
       kind: "ForEach",
       itr,
@@ -433,7 +363,7 @@ export class KIO<S extends object, E, A> {
    */
   static getRecord<R extends KFields<R>>(
     args: GetRecordArgs,
-  ): KIO<object, KError, KRecord<R>> {
+  ): KIO<KError, KRecord<R>> {
     return new KIO({ kind: "GetRecord", ...args });
   }
 
@@ -455,7 +385,7 @@ export class KIO<S extends object, E, A> {
    */
   static getRecords<R extends KFields<R>>(
     args: GetRecordsArgs,
-  ): KIO<object, KError, KRecord<R>[]> {
+  ): KIO<KError, KRecord<R>[]> {
     return new KIO({ kind: "GetRecords", ...args });
   }
 
@@ -478,7 +408,7 @@ export class KIO<S extends object, E, A> {
   static addRecord<R extends KFields<R>>(args: {
     app: number | string;
     record: R;
-  }): KIO<object, never, void> {
+  }): KIO<never, void> {
     const { app, record } = args;
     const kRecord = new KNewRecord(record, app);
     return new KIO({
@@ -509,7 +439,7 @@ export class KIO<S extends object, E, A> {
   static addRecords<R extends KFields<R>>(args: {
     app: number | string;
     records: R[];
-  }): KIO<object, never, void> {
+  }): KIO<never, void> {
     const { app, records } = args;
     const kNewRecords = records.map((record) => new KNewRecord(record, app));
     return new KIO({
@@ -538,7 +468,7 @@ export class KIO<S extends object, E, A> {
    */
   static updateRecord<R extends KFields<R>>(args: {
     record: KRecord<R>;
-  }): KIO<object, never, KRecord<R>> {
+  }): KIO<never, KRecord<R>> {
     return new KIO({
       kind: "UpdateRecord",
       ...args,
@@ -567,7 +497,7 @@ export class KIO<S extends object, E, A> {
    */
   static updateRecords<R extends KFields<R>>(args: {
     records: KRecord<R>[];
-  }): KIO<object, never, KRecord<R>[]> {
+  }): KIO<never, KRecord<R>[]> {
     return new KIO({
       kind: "UpdateRecords",
       ...args,
@@ -591,7 +521,7 @@ export class KIO<S extends object, E, A> {
    */
   static deleteRecord<R extends KFields<R>>(args: {
     record: KRecord<R>;
-  }): KIO<object, never, void> {
+  }): KIO<never, void> {
     return new KIO({
       kind: "DeleteRecord",
       ...args,
@@ -615,7 +545,7 @@ export class KIO<S extends object, E, A> {
    */
   static deleteRecords<R extends KFields<R>>(args: {
     records: KRecord<R>[];
-  }): KIO<object, never, void> {
+  }): KIO<never, void> {
     return new KIO({
       kind: "DeleteRecords",
       ...args,
@@ -638,12 +568,12 @@ export class KIO<S extends object, E, A> {
    * await kio.run(runner);
    * ```
    */
-  static commit(): KIO<object, KError, void> {
+  static commit(): KIO<KError, void> {
     return new KIO({ kind: "Commit" });
   }
 
-  [Symbol.iterator]: () => Iterator<KIO<S, E, A>, A> = function* (
-    this: KIO<S, E, A>,
+  [Symbol.iterator]: () => Iterator<KIO<E, A>, A> = function* (
+    this: KIO<E, A>,
   ) {
     return yield this;
   };

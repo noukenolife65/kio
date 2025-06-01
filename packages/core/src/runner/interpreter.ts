@@ -23,46 +23,44 @@ export class Interpreter<F extends URIS> {
 
   run(
     bulkRequests: BulkRequest[],
-    state: object,
     kioa: KIOA<unknown, unknown>,
-  ): Type<F, [object, unknown], [BulkRequest[], object, unknown]> {
+  ): Type<F, unknown, [BulkRequest[], unknown]> {
     const F = this.F;
     switch (kioa.kind) {
       case "Succeed": {
-        return F.succeed([bulkRequests, state, kioa.value]);
+        return F.succeed([bulkRequests, kioa.value]);
       }
       case "Fail": {
-        return F.fail([state, kioa.error]);
+        return F.fail(kioa.error);
       }
       case "Async": {
         const async = F.async(kioa.f);
-        return F.flatMap(async, (a) => F.succeed([bulkRequests, state, a]));
+        return F.flatMap(async, (a) => F.succeed([bulkRequests, a]));
       }
       case "AndThen": {
-        const r1 = this.run(bulkRequests, state, kioa.self);
-        return F.flatMap(r1, ([bulkRequests1, s1, a1]) => {
-          const kioa2 = kioa.f(a1, s1);
-          const r2 = this.run(bulkRequests1, s1, kioa2);
-          return F.flatMap(r2, ([bulkRequests2, , a2]) => {
-            const s2 = kioa.name ? { ...s1, [kioa.name]: a2 } : s1;
-            return F.succeed([bulkRequests2, s2, a2]);
+        const r1 = this.run(bulkRequests, kioa.self);
+        return F.flatMap(r1, ([bulkRequests1, a1]) => {
+          const kioa2 = kioa.f(a1);
+          const r2 = this.run(bulkRequests1, kioa2);
+          return F.flatMap(r2, ([bulkRequests2, a2]) => {
+            return F.succeed([bulkRequests2, a2]);
           });
         });
       }
       case "Fold": {
-        const r = this.run(bulkRequests, state, kioa.self);
+        const r = this.run(bulkRequests, kioa.self);
         return F.fold(
           r,
-          ([s, e]) => this.run(bulkRequests, s, kioa.failure(e, s)),
-          ([bulkRequests1, s1, a1]) =>
-            this.run(bulkRequests1, s1, kioa.success(a1, s1)),
+          (e) => this.run(bulkRequests, kioa.failure(e)),
+          ([bulkRequests1, a1]) =>
+            this.run(bulkRequests1, kioa.success(a1)),
         );
       }
       case "ForEach": {
         return F.flatMap(
-          F.forEach(kioa.itr, (a) => this.run([], {}, kioa.f(a))),
+          F.forEach(kioa.itr, (a) => this.run([], kioa.f(a))),
           (results) => {
-            return F.succeed([[], {}, results.map(([, , b]) => b)]);
+            return F.succeed([[], results.map(([, b]) => b)]);
           },
         );
       }
@@ -77,14 +75,14 @@ export class Interpreter<F extends URIS> {
           return (() => {
             switch (response.kind) {
               case "Left": {
-                return F.fail([state, response.value]);
+                return F.fail(response.value);
               }
               case "Right": {
                 const { record } = response.value;
                 const revision = record.$revision.value;
                 const id = record.$id.value;
                 const kRecord = new KRecord(record, kioa.app, id, revision);
-                return F.succeed([bulkRequests, state, kRecord]);
+                return F.succeed([bulkRequests, kRecord]);
               }
             }
           })();
@@ -106,7 +104,7 @@ export class Interpreter<F extends URIS> {
           return (() => {
             switch (response.kind) {
               case "Left": {
-                return F.fail([state, response.value]);
+                return F.fail(response.value);
               }
               case "Right": {
                 const { records } = response.value;
@@ -119,7 +117,7 @@ export class Interpreter<F extends URIS> {
                       record.$revision.value,
                     ),
                 );
-                return F.succeed([bulkRequests, state, kRecordList]);
+                return F.succeed([bulkRequests, kRecordList]);
               }
             }
           })();
@@ -137,7 +135,6 @@ export class Interpreter<F extends URIS> {
         };
         return F.succeed([
           [...bulkRequests, addRecordRequest],
-          state,
           undefined,
         ]);
       }
@@ -159,7 +156,6 @@ export class Interpreter<F extends URIS> {
         };
         return F.succeed([
           [...bulkRequests, addRecordsRequest],
-          state,
           undefined,
         ]);
       }
@@ -180,7 +176,6 @@ export class Interpreter<F extends URIS> {
         };
         return F.succeed([
           [...bulkRequests, updateRecordRequest],
-          state,
           new KRecord(
             record.value,
             record.app,
@@ -217,15 +212,15 @@ export class Interpreter<F extends URIS> {
         };
         return F.succeed([
           [...bulkRequests, updateRecordsRequest],
-          state,
-          records.map((record) => {
-            return new KRecord(
-              record.value,
-              record.app,
-              record.id,
-              Number(record.revision) + 1,
-            );
-          }),
+          records.map(
+            (record) =>
+              new KRecord(
+                record.value,
+                record.app,
+                record.id,
+                Number(record.revision) + 1,
+              ),
+          ),
         ]);
       }
       case "DeleteRecord": {
@@ -241,7 +236,6 @@ export class Interpreter<F extends URIS> {
         };
         return F.succeed([
           [...bulkRequests, deleteRecordRequest],
-          state,
           undefined,
         ]);
       }
@@ -264,35 +258,29 @@ export class Interpreter<F extends URIS> {
         };
         return F.succeed([
           [...bulkRequests, deleteRecordsRequest],
-          state,
           undefined,
         ]);
       }
       case "Commit": {
-        if (bulkRequests.length > 0) {
-          const bulkRequest = F.async(() =>
-            this.client.bulkRequest({
-              requests: bulkRequests,
-            }),
-          );
-          return F.flatMap(bulkRequest, (result) => {
-            return (() => {
-              switch (result.kind) {
-                case "Left": {
-                  return F.fail([state, result.value]);
-                }
-                case "Right": {
-                  return F.succeed([Array<BulkRequest>(), state, undefined]);
-                }
-              }
-            })();
-          });
-        } else {
-          return F.succeed([Array<BulkRequest>(), state, undefined]);
+        if (bulkRequests.length === 0) {
+          return F.succeed([[], undefined]);
         }
+        const commit = F.async(() =>
+          this.client.bulkRequest({ requests: bulkRequests }),
+        );
+        return F.flatMap(commit, (response) => {
+          return (() => {
+            switch (response.kind) {
+              case "Left": {
+                return F.fail(response.value);
+              }
+              case "Right": {
+                return F.succeed([[], undefined]);
+              }
+            }
+          })();
+        });
       }
-      default:
-        throw new Error("Not implemented");
     }
   }
 
