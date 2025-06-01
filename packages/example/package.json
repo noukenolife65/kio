@@ -12,8 +12,8 @@
     "kgen": "dotenvx run -- kintone-dts-gen"
   },
   "devDependencies": {
-    "@dotenvx/dotenvx": "^1.39.0",
-    "vite-node": "^3.0.9"
+    "@dotenvx/dotenvx": "^1.44.1",
+    "vite-node": "^3.1.4"
   },
   "dependencies": {
     "@kio/core": "^0.1.0"
