@@ -64,11 +64,6 @@ export type KIOA<E, A> =
       failure: (e: unknown) => KIOA<E, A>;
     }
   | {
-      kind: "ForEach";
-      itr: Iterable<unknown>;
-      f: (a: unknown) => KIOA<unknown, unknown>;
-    }
-  | {
       kind: "GetRecord";
       app: number | string;
       id: number | string;
@@ -336,17 +331,6 @@ export class KIO<E, A> {
       }
     };
     return KIO.start().andThen(() => loop(f()));
-  }
-
-  static forEach<E, A, B>(
-    itr: Iterable<A>,
-    f: (a: A) => KIO<E, B>,
-  ): KIO<E, Iterable<B>> {
-    return new KIO({
-      kind: "ForEach",
-      itr,
-      f: (a) => f(a as A).kioa,
-    });
   }
 
   /**

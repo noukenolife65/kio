@@ -37,28 +37,11 @@ export const promiseEither: Effect<URI> = {
     success: (a: A) => Promise<Either<E2, B>>,
   ): Promise<Either<E2, B>> =>
     fa.then((a) => {
-      return (() => {
-        switch (a.kind) {
-          case "Left":
-            return failure(a.value);
-          case "Right":
-            return success(a.value);
-        }
-      })();
-    }),
-  forEach: async <E, A, B>(
-    itr: Iterable<A>,
-    f: (a: A) => Promise<Either<E, B>>,
-  ): Promise<Either<E, B[]>> => {
-    const bs: B[] = [];
-    for (const a of itr) {
-      const result = await f(a);
-      if (result.kind === "Left") {
-        return result;
-      } else {
-        bs.push(result.value);
+      switch (a.kind) {
+        case "Left":
+          return failure(a.value);
+        case "Right":
+          return success(a.value);
       }
-    }
-    return new Right(bs);
-  },
+    }),
 };
