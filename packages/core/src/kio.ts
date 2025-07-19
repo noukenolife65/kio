@@ -2,23 +2,6 @@ import { _KFields, KError, KFields, KNewRecord, KRecord } from "./data.ts";
 import { RetryPolicy } from "./retry/policy.ts";
 
 /**
- * A type that preserves named state in KIO operations.
- * @template T - The name of the state property
- * @template A - The type of the state value
- *
- * @example
- * ```typescript
- * // When using andThen with a name:
- * KIO.succeed(1)
- *   .andThen("x", (a) => KIO.succeed(a + 1))  // State becomes { x: number }
- *   .andThen("y", (a, s) => KIO.succeed(s.x + 1))  // State becomes { x: number, y: number }
- * ```
- */
-export type KIOS<T extends string, A> = {
-  readonly [K in T]: A;
-};
-
-/**
  * Arguments for getting a single record from Kintone
  */
 type GetRecordArgs = {
@@ -246,9 +229,7 @@ export class KIO<E, A> {
    *   .andThen((a) => KIO.succeed(a * 2));
    * ```
    */
-  andThen<E1, B>(
-    f: (a: A) => KIO<E1, B>,
-  ): KIO<E | E1, B> {
+  andThen<E1, B>(f: (a: A) => KIO<E1, B>): KIO<E | E1, B> {
     return new KIO({
       kind: "AndThen",
       self: this.kioa,
@@ -269,9 +250,7 @@ export class KIO<E, A> {
    *   .map((a) => a * 2);
    * ```
    */
-  map<B>(
-    f: (a: A) => B,
-  ): KIO<E, B> {
+  map<B>(f: (a: A) => B): KIO<E, B> {
     return this.andThen((a) => KIO.succeed(f(a)));
   }
 
