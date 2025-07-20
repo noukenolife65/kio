@@ -1,0 +1,10 @@
+services:
+  devcontainer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../:/workspaces:cached
+    command: sleep infinity
+    env_file:
+      - ../packages/example/.env
