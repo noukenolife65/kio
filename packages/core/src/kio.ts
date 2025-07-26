@@ -1,5 +1,4 @@
 import { _KFields, KError, KFields, KNewRecord, KRecord } from "./data.ts";
-import { RetryPolicy } from "./retry/policy.ts";
 
 /**
  * Arguments for getting a single record from Kintone
@@ -308,28 +307,21 @@ export class KIO<E, A> {
   }
 
   /**
-   * Applies a retry policy to a KIO operation.
-   * @param policy - The retry policy to apply
-   * @returns An effect that will retry on failure according to the policy
+   * Retries a KIO operation the specified number of times on failure.
+   * @param times - The number of times to retry
+   * @returns An effect that will retry on failure the specified number of times
    *
    * @example
    * ```typescript
    * const kio = KIO.getRecord({ app: 1, id: 1 })
-   *   .retry({ kind: "Recurs", times: 3 });
+   *   .retryN(3);
    * ```
    */
-  retry(policy: RetryPolicy): KIO<E, A> {
-    return (() => {
-      switch (policy.kind) {
-        case "Recurs": {
-          const { times } = policy;
-          const loop = (n: number): KIO<E, A> => {
-            return this.catch((e) => (n === 0 ? KIO.fail(e) : loop(n - 1)));
-          };
-          return loop(times);
-        }
-      }
-    })();
+  retryN(times: number): KIO<E, A> {
+    const loop = (n: number): KIO<E, A> => {
+      return this.catch((e) => (n === 0 ? KIO.fail(e) : loop(n - 1)));
+    };
+    return loop(times);
   }
 
   /**
