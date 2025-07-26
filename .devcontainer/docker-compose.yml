@@ -1,10 +1,9 @@
 services:
-  devcontainer:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  app:
+    image: mcr.microsoft.com/devcontainers/javascript-node:18
     volumes:
       - ../:/workspaces:cached
     command: sleep infinity
     env_file:
+      - ../.env
       - ../packages/example/.env
