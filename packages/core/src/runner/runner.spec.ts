@@ -119,7 +119,7 @@ describe("PromiseRunner", () => {
         const kio = KIO.start()
           .andThen(() => KIO.succeed(i++))
           .andThen(() => KIO.fail("error"))
-          .retry({ kind: "Recurs", times: 2 })
+          .retryN(2)
           .catch(() => KIO.succeed(i));
         const result = await runner.run(kio);
         expect(result).toBe(3);
