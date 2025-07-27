@@ -11,6 +11,9 @@
     "lint": "eslint",
     "kgen": "dotenvx run -- kintone-dts-gen"
   },
+  "engines": {
+    "node": ">=18"
+  },
   "devDependencies": {
     "@dotenvx/dotenvx": "^1.44.1",
     "vite-node": "^3.1.4"
