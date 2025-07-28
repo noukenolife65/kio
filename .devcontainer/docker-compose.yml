@@ -1,6 +1,8 @@
 services:
   app:
-    image: mcr.microsoft.com/devcontainers/javascript-node:18
+    build:
+      dockerfile: Dockerfile
+      context: .
     volumes:
       - ../:/workspaces:cached
     command: sleep infinity
