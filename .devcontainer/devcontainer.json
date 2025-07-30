@@ -5,6 +5,7 @@
   "features": {
     "ghcr.io/anthropics/devcontainer-features/claude-code:1.0.5": {}
   },
+  "postCreateCommand": "postcreate.sh",
   "customizations": {
     "jetbrains": {
       "plugins": [
