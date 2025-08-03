@@ -91,8 +91,7 @@ describe("PromiseRunner", () => {
         }
       });
       it("Fold", async () => {
-        const kio = KIO.start()
-          .andThen(() => KIO.succeed(1))
+        const kio = KIO.succeed(1)
           .andThen(() => KIO.fail("error"))
           .fold(
             () => {
@@ -116,8 +115,7 @@ describe("PromiseRunner", () => {
       });
       it("Retry", async () => {
         let i = 0;
-        const kio = KIO.start()
-          .andThen(() => KIO.succeed(i++))
+        const kio = KIO.async(async () => i++)
           .andThen(() => KIO.fail("error"))
           .retryN(2)
           .catch(() => KIO.succeed(i));

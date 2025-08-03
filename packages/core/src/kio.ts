@@ -163,18 +163,6 @@ export class KIO<E, A> {
     this.kioa = kioa;
   }
 
-  /**
-   * Creates an effect that represents a successful operation with no value.
-   * @returns An effect with no value
-   *
-   * @example
-   * ```typescript
-   * const kio = KIO.start();
-   * ```
-   */
-  static start(): KIO<never, void> {
-    return new KIO({ kind: "Succeed", value: undefined });
-  }
 
   /**
    * Creates an effect that represents a successful operation with a value.
@@ -354,7 +342,7 @@ export class KIO<E, A> {
         return next.value.andThen((a) => loop(itr, a));
       }
     };
-    return KIO.start().andThen(() => loop(f()));
+    return loop(f());
   }
 
   /**

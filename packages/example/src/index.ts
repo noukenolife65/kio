@@ -14,7 +14,7 @@ const client = new KintoneRestAPIClient({
 const runner = createRunner(client);
 
 const action = (taskName: string) =>
-  addTask(taskName).retry({ kind: "Recurs", times: 2 });
+  addTask(taskName).retryN(2);
 
 const result = await Promise.all([
   runner.run(action("Task 1").catch((e) => KIO.succeed(e))),
