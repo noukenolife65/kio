@@ -14,4 +14,8 @@ export default defineConfig({
     },
   },
   plugins: [dts({ rollupTypes: true })],
+  server: {
+    host: "127.0.0.1",
+    open: "/docs/index.html",
+  }
 });
