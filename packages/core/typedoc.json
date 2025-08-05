@@ -1,6 +1,6 @@
 {
   "entryPoints": ["src"],
-  "out": "docs",
+  "out": "public/docs",
   "name": "@kio/core",
   "excludePrivate": true,
   "excludeProtected": true,
