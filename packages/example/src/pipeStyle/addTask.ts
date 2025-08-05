@@ -7,11 +7,7 @@ export const addTask = (taskName: string) => {
   const endsAt = new Date("2025-03-30T08:00:00Z");
 
   return pipe(
-    KIO.start(),
-    KIO.andThen(() => {
-      console.log(`Adding task: ${taskName}`);
-      return KIO.succeed(undefined);
-    }),
+    KIO.async(async () => console.log(`Adding task: ${taskName}`)),
     KIO.andThen(() =>
       KIO.getRecords<TaskRegistrationStatus>({
         app: process.env.TASK_REG_STATUS_APP_ID ?? "",
