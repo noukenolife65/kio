@@ -1,6 +1,7 @@
 {
   "entryPoints": ["src"],
   "out": "public/docs",
+  "cleanOutputDir": false, // Vite cannot serve pages recreated.
   "name": "@kio/core",
   "excludePrivate": true,
   "excludeProtected": true,
