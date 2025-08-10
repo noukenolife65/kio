@@ -15,6 +15,13 @@ import { _KFields, KIdField, KRecord, KRevisionField } from "../data.ts";
 export class Interpreter<F extends URIS> {
   private readonly client: KintoneClient;
   private readonly F: Effect<F>;
+  private static readonly PROHIBITED_UPDATE_FIELDS = new Set([
+    "RECORD_NUMBER",
+    "MODIFIER",
+    "CREATOR",
+    "UPDATED_TIME",
+    "CREATED_TIME",
+  ]);
 
   constructor(F: Effect<F>, client: KintoneClient) {
     this.F = F;
@@ -64,20 +71,18 @@ export class Interpreter<F extends URIS> {
           }),
         );
         return F.flatMap(getRecord, (response) => {
-          return (() => {
-            switch (response.kind) {
-              case "Left": {
-                return F.fail(response.value);
-              }
-              case "Right": {
-                const { record } = response.value;
-                const revision = record.$revision.value;
-                const id = record.$id.value;
-                const kRecord = new KRecord(record, kioa.app, id, revision);
-                return F.succeed([bulkRequests, kRecord]);
-              }
+          switch (response.kind) {
+            case "Left": {
+              return F.fail(response.value);
             }
-          })();
+            case "Right": {
+              const { record } = response.value;
+              const revision = record.$revision.value;
+              const id = record.$id.value;
+              const kRecord = new KRecord(record, kioa.app, id, revision);
+              return F.succeed([bulkRequests, kRecord]);
+            }
+          }
         });
       }
       case "GetRecords": {
@@ -93,26 +98,24 @@ export class Interpreter<F extends URIS> {
           }),
         );
         return F.flatMap(getRecords, (response) => {
-          return (() => {
-            switch (response.kind) {
-              case "Left": {
-                return F.fail(response.value);
-              }
-              case "Right": {
-                const { records } = response.value;
-                const kRecordList = records.map(
-                  (record) =>
-                    new KRecord(
-                      record,
-                      app,
-                      record.$id.value,
-                      record.$revision.value,
-                    ),
-                );
-                return F.succeed([bulkRequests, kRecordList]);
-              }
+          switch (response.kind) {
+            case "Left": {
+              return F.fail(response.value);
             }
-          })();
+            case "Right": {
+              const { records } = response.value;
+              const kRecordList = records.map(
+                (record) =>
+                  new KRecord(
+                    record,
+                    app,
+                    record.$id.value,
+                    record.$revision.value,
+                  ),
+              );
+              return F.succeed([bulkRequests, kRecordList]);
+            }
+          }
         });
       }
       case "AddRecord": {
@@ -261,35 +264,28 @@ export class Interpreter<F extends URIS> {
           this.client.bulkRequest({ requests: bulkRequests }),
         );
         return F.flatMap(commit, (response) => {
-          return (() => {
-            switch (response.kind) {
-              case "Left": {
-                return F.fail(response.value);
-              }
-              case "Right": {
-                return F.succeed([[], undefined]);
-              }
+          switch (response.kind) {
+            case "Left": {
+              return F.fail(response.value);
             }
-          })();
+            case "Right": {
+              return F.succeed([[], undefined]);
+            }
+          }
         });
       }
     }
   }
 
   private removeProhibitedFieldsForUpdate(record: _KFields) {
-    return Object.fromEntries(
-      Object.entries(record).filter(([, { type }]) => {
-        return (
-          !type ||
-          ![
-            "RECORD_NUMBER",
-            "MODIFIER",
-            "CREATOR",
-            "UPDATED_TIME",
-            "CREATED_TIME",
-          ].includes(type)
-        );
-      }),
-    );
+    const result: _KFields = {};
+    for (const key in record) {
+      const field = record[key]!;
+      if (field.type && Interpreter.PROHIBITED_UPDATE_FIELDS.has(field.type)) {
+        continue;
+      }
+      result[key] = field;
+    }
+    return result;
   }
 }

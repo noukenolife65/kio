@@ -10,7 +10,7 @@ export default [
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
   prettier,
-  { ignores: ["dist", "coverage", "docs"] },
+  { ignores: ["dist", "coverage", "public"] },
   {
     rules: {
       "@typescript-eslint/no-explicit-any": "off"
