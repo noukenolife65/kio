@@ -34,12 +34,12 @@ export class KRecord<T> {
   readonly value: T;
   readonly app: string | number;
   readonly id: string | number;
-  readonly revision?: string | number;
+  readonly revision: string | number | undefined;
   constructor(
     value: T,
     app: string | number,
     id: string | number,
-    revision?: string | number,
+    revision: string | number | undefined,
   ) {
     this.value = value;
     this.app = app;

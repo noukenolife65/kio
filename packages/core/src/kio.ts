@@ -17,9 +17,9 @@ type GetRecordsArgs = {
   /** The app ID */
   app: number | string;
   /** Optional list of field codes to retrieve */
-  fields?: string[];
+  fields?: string[] | undefined;
   /** Optional query string to filter records */
-  query?: string;
+  query?: string | undefined;
 };
 
 /**
@@ -53,8 +53,8 @@ export type KIOA<E, A> =
   | {
       kind: "GetRecords";
       app: number | string;
-      fields?: string[];
-      query?: string;
+      fields?: string[] | undefined;
+      query?: string | undefined;
     }
   | {
       kind: "AddRecord";
