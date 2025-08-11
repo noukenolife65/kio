@@ -15,9 +15,9 @@ export type GetRecordResponse = {
 };
 export type GetRecordsParams = {
   app: string | number;
-  fields?: string[];
-  query?: string;
-  totalCount?: boolean;
+  fields?: string[] | undefined;
+  query?: string | undefined;
+  totalCount?: boolean | undefined;
 };
 export type GetRecordsResponse<R extends _KFields> = {
   records: R[];
@@ -45,7 +45,7 @@ export type UpdateRecordRequest = {
     app: string | number;
     id: string | number;
     record: _KFields;
-    revision?: string | number;
+    revision?: string | number | undefined;
   };
 };
 export type UpdateRecordsRequest = {
@@ -56,7 +56,7 @@ export type UpdateRecordsRequest = {
     records: {
       id: string | number;
       record: _KFields;
-      revision?: string | number;
+      revision?: string | number | undefined;
     }[];
   };
 };
@@ -66,7 +66,7 @@ export type DeleteRecordsRequest = {
   payload: {
     app: string | number;
     ids: (string | number)[];
-    revisions?: (string | number)[];
+    revisions?: (string | number)[] | undefined;
   };
 };
 export type BulkRequest =
@@ -122,7 +122,12 @@ export class KintoneClientImpl implements KintoneClient {
     params: GetRecordsParams,
   ): Promise<Either<KError, GetRecordsResponse<R>>> {
     try {
-      const result = await this.client.record.getRecords(params);
+      const result = await this.client.record.getRecords({
+        app: params.app,
+        ...(params.fields !== undefined ? { fields: params.fields } : {}),
+        ...(params.query !== undefined ? { query: params.query } : {}),
+        ...(params.totalCount !== undefined ? { totalCount: params.totalCount } : {}),
+      });
       return new Right(result as unknown as GetRecordsResponse<R>);
     } catch (e) {
       if (e instanceof KintoneRestAPIError) {

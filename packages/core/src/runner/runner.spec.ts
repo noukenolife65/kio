@@ -154,9 +154,9 @@ describe("PromiseRunner", () => {
     describe("Kintone Operations", () => {
       const app = 1;
       const kClient = new KintoneRestAPIClient({
-        baseUrl: process.env.KINTONE_BASE_URL,
+        baseUrl: process.env["KINTONE_BASE_URL"]!,
         auth: {
-          apiToken: process.env.KINTONE_API_TOKEN,
+          apiToken: process.env["KINTONE_API_TOKEN"]!,
         },
       });
       const runner = createRunner(kClient);
@@ -578,8 +578,8 @@ describe("PromiseRunner", () => {
             const { records } = await kClient.record.getRecords({ app });
             expect(records).toHaveLength(1);
             const record = records[0];
-            if (record?.text?.value) {
-              expect(record.text.value).toBe("test"); // Verify the record wasn't updated
+            if (record?.["text"]?.value) {
+              expect(record["text"].value).toBe("test"); // Verify the record wasn't updated
             } else {
               expect.fail("record should exist with text field");
             }
