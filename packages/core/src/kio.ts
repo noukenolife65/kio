@@ -1,26 +1,25 @@
-import { _KFields, KError, KFields, KNewRecord, KRecord } from "./data.ts";
-
-/**
- * Arguments for getting a single record from Kintone
- */
-type GetRecordArgs = {
-  /** The app ID */
-  app: number | string;
-  /** The record ID */
-  id: number | string;
-};
-
-/**
- * Arguments for getting multiple records from Kintone
- */
-type GetRecordsArgs = {
-  /** The app ID */
-  app: number | string;
-  /** Optional list of field codes to retrieve */
-  fields?: string[] | undefined;
-  /** Optional query string to filter records */
-  query?: string | undefined;
-};
+import {
+  KAnyFields,
+  KError,
+  KFields,
+  KNewRecord,
+  KRecord,
+  GetRecordArgs,
+  GetRecordsArgs,
+  AddRecordArgs,
+  AddRecordsArgs,
+  _UpdateRecordArgs,
+  _UpdateRecordsArgs,
+  DeleteRecordArgs,
+  _DeleteRecordArgs,
+  DeleteRecordsArgs,
+  _DeleteRecordsArgs,
+  validate,
+  _AddRecordArgs,
+  _AddRecordsArgs,
+  UpdateRecordArgs,
+  UpdateRecordsArgs,
+} from "./models.ts";
 
 /**
  * Represents the algebraic data type for all possible KIO operations.
@@ -58,27 +57,27 @@ export type KIOA<E, A> =
     }
   | {
       kind: "AddRecord";
-      record: KNewRecord<_KFields>;
+      record: KNewRecord<KAnyFields>;
     }
   | {
       kind: "AddRecords";
-      records: KNewRecord<_KFields>[];
+      records: KNewRecord<KAnyFields>[];
     }
   | {
       kind: "UpdateRecord";
-      record: KRecord<_KFields>;
+      record: KRecord<KAnyFields>;
     }
   | {
       kind: "UpdateRecords";
-      records: KRecord<_KFields>[];
+      records: KRecord<KAnyFields>[];
     }
   | {
       kind: "DeleteRecord";
-      record: KRecord<_KFields>;
+      record: KRecord<KAnyFields>;
     }
   | {
       kind: "DeleteRecords";
-      records: KRecord<_KFields>[];
+      records: KRecord<KAnyFields>[];
     }
   | {
       kind: "Commit";
@@ -163,7 +162,6 @@ export class KIO<E, A> {
     this.kioa = kioa;
   }
 
-
   /**
    * Creates an effect that represents a successful operation with a value.
    * @template A - The type of the success value
@@ -232,7 +230,7 @@ export class KIO<E, A> {
    */
   fold<E1, B>(
     success: (a: A) => KIO<E1, B>,
-    failure: (e: E) => KIO<E1, B>,
+    failure: (e: E) => KIO<E1, B>
   ): KIO<E1, B> {
     return new KIO({
       kind: "Fold",
@@ -329,11 +327,11 @@ export class KIO<E, A> {
    * ```
    */
   static gen<K extends KIO<any, any>, A>(
-    f: () => Generator<K, A>,
+    f: () => Generator<K, A>
   ): KIO<K extends KIO<infer E, any> ? E : never, A> {
     const loop = (
       itr: Generator<K, A>,
-      a?: any,
+      a?: any
     ): KIO<K extends KIO<infer E, any> ? E : never, A> => {
       const next = itr.next(a);
       if (next.done) {
@@ -366,8 +364,9 @@ export class KIO<E, A> {
    * ```
    */
   static getRecord<R extends KFields<R>>(
-    args: GetRecordArgs,
+    args: GetRecordArgs
   ): KIO<KError, KRecord<R>> {
+    validate(GetRecordArgs, args);
     return new KIO({ kind: "GetRecord", ...args });
   }
 
@@ -396,8 +395,9 @@ export class KIO<E, A> {
    * ```
    */
   static getRecords<R extends KFields<R>>(
-    args: GetRecordsArgs,
+    args: GetRecordsArgs
   ): KIO<KError, KRecord<R>[]> {
+    validate(GetRecordsArgs, args);
     return new KIO({ kind: "GetRecords", ...args });
   }
 
@@ -421,12 +421,15 @@ export class KIO<E, A> {
    * await runner.run(kio);
    * ```
    */
-  static addRecord<R extends KFields<R>>(args: {
-    app: number | string;
-    record: R;
-  }): KIO<never, void> {
+  static addRecord<R extends KFields<R>>(
+    args: AddRecordArgs<R>
+  ): KIO<never, void> {
+    validate(_AddRecordArgs, args);
     const { app, record } = args;
-    const kRecord = new KNewRecord(record, app);
+    const kRecord = new KNewRecord({
+      app,
+      value: record,
+    });
     return new KIO({
       kind: "AddRecord",
       record: kRecord,
@@ -456,12 +459,18 @@ export class KIO<E, A> {
    * await runner.run(kio);
    * ```
    */
-  static addRecords<R extends KFields<R>>(args: {
-    app: number | string;
-    records: R[];
-  }): KIO<never, void> {
+  static addRecords<R extends KFields<R>>(
+    args: AddRecordsArgs<R>
+  ): KIO<never, void> {
+    validate(_AddRecordsArgs, args);
     const { app, records } = args;
-    const kNewRecords = records.map((record) => new KNewRecord(record, app));
+    const kNewRecords = records.map(
+      (record) =>
+        new KNewRecord({
+          app,
+          value: record,
+        })
+    );
     return new KIO({
       kind: "AddRecords",
       records: kNewRecords,
@@ -490,9 +499,10 @@ export class KIO<E, A> {
    * await runner.run(kio);
    * ```
    */
-  static updateRecord<R extends KFields<R>>(args: {
-    record: KRecord<R>;
-  }): KIO<never, KRecord<R>> {
+  static updateRecord<R extends KFields<R>>(
+    args: UpdateRecordArgs<R>
+  ): KIO<never, KRecord<R>> {
+    validate(_UpdateRecordArgs, args);
     return new KIO({
       kind: "UpdateRecord",
       ...args,
@@ -523,9 +533,10 @@ export class KIO<E, A> {
    * await runner.run(kio);
    * ```
    */
-  static updateRecords<R extends KFields<R>>(args: {
-    records: KRecord<R>[];
-  }): KIO<never, KRecord<R>[]> {
+  static updateRecords<R extends KFields<R>>(
+    args: UpdateRecordsArgs<R>
+  ): KIO<never, KRecord<R>[]> {
+    validate(_UpdateRecordsArgs, args);
     return new KIO({
       kind: "UpdateRecords",
       ...args,
@@ -551,9 +562,10 @@ export class KIO<E, A> {
    * await runner.run(kio);
    * ```
    */
-  static deleteRecord<R extends KFields<R>>(args: {
-    record: KRecord<R>;
-  }): KIO<never, void> {
+  static deleteRecord<R extends KFields<R>>(
+    args: DeleteRecordArgs<R>
+  ): KIO<never, void> {
+    validate(_DeleteRecordArgs, args);
     return new KIO({
       kind: "DeleteRecord",
       ...args,
@@ -579,9 +591,10 @@ export class KIO<E, A> {
    * await runner.run(kio);
    * ```
    */
-  static deleteRecords<R extends KFields<R>>(args: {
-    records: KRecord<R>[];
-  }): KIO<never, void> {
+  static deleteRecords<R extends KFields<R>>(
+    args: DeleteRecordsArgs<R>
+  ): KIO<never, void> {
+    validate(_DeleteRecordsArgs, args);
     return new KIO({
       kind: "DeleteRecords",
       ...args,
@@ -657,20 +670,20 @@ export class KIO<E, A> {
    * ```
    */
   static andThen<A, E1, B>(
-    f: (a: A) => KIO<E1, B>,
+    f: (a: A) => KIO<E1, B>
   ): <E>(kio: KIO<E, A>) => KIO<E | E1, B>;
   static andThen<N extends string, A, E1, B>(
     name: Exclude<N, keyof A>,
-    f: (a: A) => KIO<E1, B>,
+    f: (a: A) => KIO<E1, B>
   ): <E>(
-    kio: KIO<E, A>,
+    kio: KIO<E, A>
   ) => KIO<
     E | E1,
     { readonly [K in keyof A | N]: K extends keyof A ? A[K] : B }
   >;
   static andThen<N extends string, A, E1, B>(
     nameOrF: Exclude<N, keyof A> | ((a: A) => KIO<E1, B>),
-    f?: (a: A) => KIO<E1, B>,
+    f?: (a: A) => KIO<E1, B>
   ) {
     if (typeof nameOrF === "string" && f) {
       const name = nameOrF;
@@ -692,7 +705,7 @@ export class KIO<E, A> {
   }
 
   [Symbol.iterator]: () => Iterator<KIO<E, A>, A> = function* (
-    this: KIO<E, A>,
+    this: KIO<E, A>
   ) {
     return yield this;
   };

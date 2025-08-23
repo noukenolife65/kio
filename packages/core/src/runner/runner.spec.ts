@@ -7,12 +7,13 @@ import {
   GetRecordsResponse,
   KintoneClient,
 } from "../client.ts";
-import { _KFields, KError, KRecord } from "../data.ts";
+import { KAnyFields, KError, KRecord } from "../models.ts";
 import { KintoneRestAPIClient } from "@kintone/rest-api-client";
 import { KVPairs } from "../helper.ts";
 import { createRunner, PromiseRunner } from "./promise/runner.ts";
 import SavedFields = kintone.types.SavedFields;
 import Fields = kintone.types.Fields;
+import { ValidationError } from "../models.ts";
 
 describe("PromiseRunner", () => {
   describe("run", () => {
@@ -27,7 +28,7 @@ describe("PromiseRunner", () => {
             },
           });
         }
-        async getRecords<R extends _KFields>(): Promise<
+        async getRecords<R extends KAnyFields>(): Promise<
           Either<KError, GetRecordsResponse<R>>
         > {
           return new Right([
@@ -100,7 +101,7 @@ describe("PromiseRunner", () => {
             (e) => {
               expect(e).toBe("error");
               return KIO.succeed(2);
-            },
+            }
           )
           .fold(
             (a) => {
@@ -109,7 +110,7 @@ describe("PromiseRunner", () => {
             },
             () => {
               expect.fail("should not be called");
-            },
+            }
           );
         await runner.run(kio);
       });
@@ -201,12 +202,17 @@ describe("PromiseRunner", () => {
           const result = await runner.run(kio);
           // Then
           expect(result).toStrictEqual(
-            new KRecord(
-              expectedRecord,
-              app,
-              expectedRecord.$id.value,
-              expectedRecord.$revision.value,
-            ),
+            new KRecord({
+              app: app,
+              value: expectedRecord,
+              id: expectedRecord.$id.value,
+              revision: expectedRecord.$revision.value,
+            })
+          );
+        });
+        it("should fail with invalid arguments", () => {
+          expect(() => KIO.getRecord({ app: "a", id: "a" })).toThrowError(
+            ValidationError
           );
         });
         it("should fail to get a record", async () => {
@@ -258,13 +264,13 @@ describe("PromiseRunner", () => {
           expect(result).toStrictEqual(
             expectedRecords.map(
               (expectedRecord) =>
-                new KRecord(
-                  expectedRecord,
+                new KRecord({
                   app,
-                  expectedRecord.$id.value,
-                  expectedRecord.$revision.value,
-                ),
-            ),
+                  value: expectedRecord,
+                  id: expectedRecord.$id.value,
+                  revision: expectedRecord.$revision.value,
+                })
+            )
           );
         });
         it("should fail to get records", async () => {
@@ -297,7 +303,7 @@ describe("PromiseRunner", () => {
           };
           // When
           const kio = KIO.addRecord({ app, record }).andThen(() =>
-            KIO.commit(),
+            KIO.commit()
           );
           await runner.run(kio);
           // Then
@@ -338,7 +344,7 @@ describe("PromiseRunner", () => {
           ];
           // When
           const kio = KIO.addRecords({ app, records }).andThen(() =>
-            KIO.commit(),
+            KIO.commit()
           );
           await runner.run(kio);
           // Then
@@ -346,7 +352,7 @@ describe("PromiseRunner", () => {
             KVPairs<Fields>
           >({ app });
           expect(savedRecords.map((r) => r.text.value)).toStrictEqual(
-            records.map((r) => r.text.value),
+            records.map((r) => r.text.value)
           );
         });
         it("should fail to add records", async () => {
@@ -395,7 +401,7 @@ describe("PromiseRunner", () => {
                 ...value,
                 text: { value: "updated" },
               })),
-            }),
+            })
           )
           .andThen(() => KIO.commit());
         await runner.run(kio);
@@ -437,9 +443,9 @@ describe("PromiseRunner", () => {
                 record.update((value) => ({
                   ...value,
                   text: { value: "updated" },
-                })),
+                }))
               ),
-            }),
+            })
           )
           .andThen(() => KIO.commit());
         await runner.run(kio);
@@ -522,7 +528,7 @@ describe("PromiseRunner", () => {
               KIO.addRecord({
                 app,
                 record: a,
-              }),
+              })
             )
             .andThen(() => KIO.commit())
             .andThen(() => KIO.getRecords({ app }))
@@ -531,7 +537,7 @@ describe("PromiseRunner", () => {
                 record.update((value) => ({
                   ...value,
                   text: { value: "updated" },
-                })),
+                }))
               );
             })
             .andThen((a) => {
@@ -555,7 +561,7 @@ describe("PromiseRunner", () => {
               KIO.addRecord({
                 app,
                 record: a,
-              }),
+              })
             )
             .andThen(() => KIO.commit())
             .andThen(() => KIO.getRecords({ app }))

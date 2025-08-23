@@ -10,7 +10,7 @@ import {
   UpdateRecordsRequest,
 } from "../client.ts";
 import { KIOA } from "../kio.ts";
-import { _KFields, KIdField, KRecord, KRevisionField } from "../data.ts";
+import { KAnyFields, KIdField, KRecord, KRevisionField } from "../models.ts";
 
 export class Interpreter<F extends URIS> {
   private readonly client: KintoneClient;
@@ -30,7 +30,7 @@ export class Interpreter<F extends URIS> {
 
   run(
     bulkRequests: BulkRequest[],
-    kioa: KIOA<unknown, unknown>,
+    kioa: KIOA<unknown, unknown>
   ): Type<F, unknown, [BulkRequest[], unknown]> {
     const F = this.F;
     switch (kioa.kind) {
@@ -59,8 +59,7 @@ export class Interpreter<F extends URIS> {
         return F.fold(
           r,
           (e) => this.run(bulkRequests, kioa.failure(e)),
-          ([bulkRequests1, a1]) =>
-            this.run(bulkRequests1, kioa.success(a1)),
+          ([bulkRequests1, a1]) => this.run(bulkRequests1, kioa.success(a1))
         );
       }
       case "GetRecord": {
@@ -68,7 +67,7 @@ export class Interpreter<F extends URIS> {
           this.client.getRecord({
             app: kioa.app,
             id: kioa.id,
-          }),
+          })
         );
         return F.flatMap(getRecord, (response) => {
           switch (response.kind) {
@@ -79,7 +78,12 @@ export class Interpreter<F extends URIS> {
               const { record } = response.value;
               const revision = record.$revision.value;
               const id = record.$id.value;
-              const kRecord = new KRecord(record, kioa.app, id, revision);
+              const kRecord = new KRecord({
+                app: kioa.app,
+                value: record,
+                id,
+                revision,
+              });
               return F.succeed([bulkRequests, kRecord]);
             }
           }
@@ -95,7 +99,7 @@ export class Interpreter<F extends URIS> {
             app,
             fields,
             query,
-          }),
+          })
         );
         return F.flatMap(getRecords, (response) => {
           switch (response.kind) {
@@ -106,12 +110,12 @@ export class Interpreter<F extends URIS> {
               const { records } = response.value;
               const kRecordList = records.map(
                 (record) =>
-                  new KRecord(
-                    record,
+                  new KRecord({
                     app,
-                    record.$id.value,
-                    record.$revision.value,
-                  ),
+                    value: record,
+                    id: record.$id.value,
+                    revision: record.$revision.value,
+                  })
               );
               return F.succeed([bulkRequests, kRecordList]);
             }
@@ -128,17 +132,14 @@ export class Interpreter<F extends URIS> {
             record: record.value,
           },
         };
-        return F.succeed([
-          [...bulkRequests, addRecordRequest],
-          undefined,
-        ]);
+        return F.succeed([[...bulkRequests, addRecordRequest], undefined]);
       }
       case "AddRecords": {
         const { records } = kioa;
         const [head] = records;
         if (head === undefined) {
           throw new Error(
-            "No records provided for the add records operation. Please specify at least one record.",
+            "No records provided for the add records operation. Please specify at least one record."
           );
         }
         const addRecordsRequest: AddRecordsRequest = {
@@ -149,15 +150,12 @@ export class Interpreter<F extends URIS> {
             records: records.map((record) => record.value),
           },
         };
-        return F.succeed([
-          [...bulkRequests, addRecordsRequest],
-          undefined,
-        ]);
+        return F.succeed([[...bulkRequests, addRecordsRequest], undefined]);
       }
       case "UpdateRecord": {
         const { record } = kioa;
         const updatingRecord = this.removeProhibitedFieldsForUpdate(
-          record.value,
+          record.value
         );
         const updateRecordRequest: UpdateRecordRequest = {
           method: "PUT",
@@ -171,12 +169,12 @@ export class Interpreter<F extends URIS> {
         };
         return F.succeed([
           [...bulkRequests, updateRecordRequest],
-          new KRecord(
-            record.value,
-            record.app,
-            record.id,
-            Number(record.revision) + 1,
-          ),
+          new KRecord({
+            app: record.app,
+            value: record.value,
+            id: record.id,
+            revision: Number(record.revision) + 1,
+          }),
         ]);
       }
       case "UpdateRecords": {
@@ -184,12 +182,12 @@ export class Interpreter<F extends URIS> {
         const [head] = records;
         if (head === undefined) {
           throw new Error(
-            "No records provided for the update records operation. Please specify at least one record.",
+            "No records provided for the update records operation. Please specify at least one record."
           );
         }
         const updatingRecords = records.map((record) => {
           const updatingRecord = this.removeProhibitedFieldsForUpdate(
-            record.value,
+            record.value
           );
           return {
             id: record.id,
@@ -209,12 +207,12 @@ export class Interpreter<F extends URIS> {
           [...bulkRequests, updateRecordsRequest],
           records.map(
             (record) =>
-              new KRecord(
-                record.value,
-                record.app,
-                record.id,
-                Number(record.revision) + 1,
-              ),
+              new KRecord({
+                app: record.app,
+                value: record.value,
+                id: record.id,
+                revision: Number(record.revision) + 1,
+              })
           ),
         ]);
       }
@@ -229,17 +227,14 @@ export class Interpreter<F extends URIS> {
             revisions: [record.revision ?? -1],
           },
         };
-        return F.succeed([
-          [...bulkRequests, deleteRecordRequest],
-          undefined,
-        ]);
+        return F.succeed([[...bulkRequests, deleteRecordRequest], undefined]);
       }
       case "DeleteRecords": {
         const { records } = kioa;
         const [head] = records;
         if (head === undefined) {
           throw new Error(
-            "No records provided for the delete records operation. Please specify at least one record.",
+            "No records provided for the delete records operation. Please specify at least one record."
           );
         }
         const deleteRecordsRequest: DeleteRecordsRequest = {
@@ -251,17 +246,14 @@ export class Interpreter<F extends URIS> {
             revisions: records.map((record) => record.revision ?? -1),
           },
         };
-        return F.succeed([
-          [...bulkRequests, deleteRecordsRequest],
-          undefined,
-        ]);
+        return F.succeed([[...bulkRequests, deleteRecordsRequest], undefined]);
       }
       case "Commit": {
         if (bulkRequests.length === 0) {
           return F.succeed([[], undefined]);
         }
         const commit = F.async(() =>
-          this.client.bulkRequest({ requests: bulkRequests }),
+          this.client.bulkRequest({ requests: bulkRequests })
         );
         return F.flatMap(commit, (response) => {
           switch (response.kind) {
@@ -277,8 +269,8 @@ export class Interpreter<F extends URIS> {
     }
   }
 
-  private removeProhibitedFieldsForUpdate(record: _KFields) {
-    const result: _KFields = {};
+  private removeProhibitedFieldsForUpdate(record: KAnyFields) {
+    const result: KAnyFields = {};
     for (const key in record) {
       const field = record[key]!;
       if (field.type && Interpreter.PROHIBITED_UPDATE_FIELDS.has(field.type)) {
