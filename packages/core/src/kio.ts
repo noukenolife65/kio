@@ -22,9 +22,9 @@ import {
 } from "./models.ts";
 
 /**
- * Represents the algebraic data type for all possible KIO operations.
- * @template E - The error type
- * @template A - The success value type
+ * Represents all possible KIO operations.
+ * @template E - Failure type
+ * @template A - Success type
  */
 export type KIOA<E, A> =
   | {
@@ -90,8 +90,8 @@ export type KIOA<E, A> =
  * - Write operations (add, update, delete) are batched and only saved to Kintone when `commit()` is called.
  * - If an operation fails or `fail()` is called before commit, no changes are made to your data. After commit succeeds, changes are permanent.
  *
- * @template E - The error type
- * @template A - The success value type
+ * @template E - Failure type
+ * @template A - Success type
  *
  * @example Basic record operations with error handling
  * ```typescript
@@ -163,10 +163,10 @@ export class KIO<E, A> {
   }
 
   /**
-   * Creates an effect that represents a successful operation with a value.
-   * @template A - The type of the success value
-   * @param a - The success value
-   * @returns An effect with the given value
+   * Creates a successful effect with a value.
+   * @template A - Success type
+   * @param a - Success value
+   * @returns Effect that succeeds with the given value
    *
    * @example
    * ```typescript
@@ -178,10 +178,10 @@ export class KIO<E, A> {
   }
 
   /**
-   * Creates an effect that represents a failed operation.
-   * @template E - The type of the error
-   * @param e - The error value
-   * @returns An effect with the given error
+   * Creates a failed effect with an error.
+   * @template E - Failure type
+   * @param e - Error value
+   * @returns Effect that fails with the given error
    *
    * @example
    * ```typescript
@@ -194,10 +194,9 @@ export class KIO<E, A> {
 
   /**
    * Creates an effect from an async function.
-   * @template A - The type of the success value
-   * @template E - The type of the error (defaults to unknown)
-   * @param f - The async function to execute
-   * @returns An effect that will execute the async function
+   * @template A - Success type
+   * @param f - Async function to execute
+   * @returns Effect that succeeds with the async function result
    *
    * @example
    * ```typescript
@@ -212,12 +211,12 @@ export class KIO<E, A> {
   }
 
   /**
-   * Handles both success and failure cases of a KIO operation.
-   * @template E1 - The new error type
-   * @template B - The new success value type
+   * Handles both success and failure cases.
+   * @template E1 - New failure type
+   * @template B - New success type
    * @param success - Function to handle success case
    * @param failure - Function to handle failure case
-   * @returns An effect with the transformed result
+   * @returns Effect that transforms both success and failure cases into a new result
    *
    * @example
    * ```typescript
@@ -241,11 +240,11 @@ export class KIO<E, A> {
   }
 
   /**
-   * Handles the failure case of a KIO operation.
-   * @template E1 - The new error type
-   * @template B - The new success value type
+   * Handles the failure case.
+   * @template E1 - New failure type
+   * @template B - New success type
    * @param f - Function to handle the error
-   * @returns An effect that handles the error case
+   * @returns Effect that handles failures
    *
    * @example
    * ```typescript
@@ -258,11 +257,11 @@ export class KIO<E, A> {
   }
 
   /**
-   * Chains KIO operations together.
-   * @template E1 - The new error type
-   * @template B - The new success value type
-   * @param f - Function to transform the current result into a new KIO operation
-   * @returns An effect that chains the operations
+   * Chains effects sequentially based on current result.
+   * @template E1 - New failure type
+   * @template B - New success type
+   * @param f - Function that returns the next effect
+   * @returns Chained effect
    *
    * @example
    * ```typescript
@@ -276,10 +275,10 @@ export class KIO<E, A> {
   }
 
   /**
-   * Transforms the result of a KIO operation.
-   * @template B - The new success value type
+   * Transforms the current result using the given function.
+   * @template B - New success type
    * @param f - Function to transform the current result
-   * @returns An effect with the transformed result
+   * @returns Effect that succeeds with the transformed result
    *
    * @example
    * ```typescript
@@ -293,9 +292,9 @@ export class KIO<E, A> {
   }
 
   /**
-   * Retries a KIO operation the specified number of times on failure.
-   * @param times - The number of times to retry
-   * @returns An effect that will retry on failure the specified number of times
+   * Retries the effect the specified number of times on failure.
+   * @param times - Number of times to retry
+   * @returns Effect that succeeds on any attempt or fails after all attempts
    *
    * @example
    * ```typescript
@@ -311,11 +310,11 @@ export class KIO<E, A> {
   }
 
   /**
-   * Creates an effect from a generator function.
-   * @template K - The type of KIO operations yielded by the generator
-   * @template A - The type of the final value
-   * @param f - The generator function that yields KIO operations
-   * @returns An effect that will execute the generator's operations in sequence
+   * Creates an effect from a generator function. Allows writing effects in direct style using yield.
+   * @template K - Effects yielded by the generator
+   * @template A - Final value type
+   * @param f - Generator function that yields effects
+   * @returns Effect built with the given generator function
    *
    * @example
    * ```typescript
@@ -344,10 +343,12 @@ export class KIO<E, A> {
   }
 
   /**
-   * Gets a single record from Kintone.
-   * @template R - The record type
-   * @param args - The arguments for getting the record
-   * @returns An effect that will get the record
+   * TODO: Start working on this doc.
+   *
+   * Gets a single record.
+   * @template R - Record type
+   * @param args - Arguments for getting the record
+   * @returns Effect that succeeds with the record or fails with error
    *
    * @example
    * ```typescript
@@ -371,10 +372,10 @@ export class KIO<E, A> {
   }
 
   /**
-   * Gets multiple records from Kintone.
-   * @template R - The record type
-   * @param args - The arguments for getting the records
-   * @returns An effect that will get the records
+   * Gets multiple records.
+   * @template R - Record type
+   * @param args - Arguments for getting the records
+   * @returns Effect that succeeds with the records or fails with error
    *
    * @example
    * ```typescript
@@ -402,10 +403,10 @@ export class KIO<E, A> {
   }
 
   /**
-   * Adds a new record to Kintone. The operation won't be executed until commit is called.
-   * @template R - The record type
-   * @param args - The arguments for adding the record
-   * @returns An effect that will add the record when committed
+   * Adds a new record. Won't be executed until commit is called.
+   * @template R - Record type
+   * @param args - Arguments for adding the record
+   * @returns Effect that succeeds immediately (actual add happens at commit)
    *
    * @example
    * ```typescript
@@ -437,10 +438,10 @@ export class KIO<E, A> {
   }
 
   /**
-   * Adds multiple records to Kintone. The operations won't be executed until commit is called.
-   * @template R - The record type
-   * @param args - The arguments for adding the records
-   * @returns An effect that will add the records when committed
+   * Adds multiple records. Won't be executed until commit is called.
+   * @template R - Record type
+   * @param args - Arguments for adding the records
+   * @returns Effect that succeeds immediately (actual add happens at commit)
    *
    * @example
    * ```typescript
@@ -478,10 +479,10 @@ export class KIO<E, A> {
   }
 
   /**
-   * Updates an existing record in Kintone. The operation won't be executed until commit is called.
-   * @template R - The record type
-   * @param args - The arguments for updating the record
-   * @returns An effect that will update the record when committed
+   * Updates an existing record. Won't be executed until commit is called.
+   * @template R - Record type
+   * @param args - Arguments for updating the record
+   * @returns Effect that succeeds with updated record (actual update happens at commit)
    *
    * @example
    * ```typescript
@@ -510,10 +511,10 @@ export class KIO<E, A> {
   }
 
   /**
-   * Updates multiple records in Kintone. The operations won't be executed until commit is called.
-   * @template R - The record type
-   * @param args - The arguments for updating the records
-   * @returns An effect that will update the records when committed
+   * Updates multiple records. Won't be executed until commit is called.
+   * @template R - Record type
+   * @param args - Arguments for updating the records
+   * @returns Effect that succeeds with updated records (actual update happens at commit)
    *
    * @example
    * ```typescript
@@ -544,10 +545,10 @@ export class KIO<E, A> {
   }
 
   /**
-   * Deletes a record from Kintone. The operation won't be executed until commit is called.
-   * @template R - The record type
-   * @param args - The arguments for deleting the record
-   * @returns An effect that will delete the record when committed
+   * Deletes a record. Won't be executed until commit is called.
+   * @template R - Record type
+   * @param args - Arguments for deleting the record
+   * @returns Effect that succeeds immediately (actual delete happens at commit)
    *
    * @example
    * ```typescript
@@ -573,10 +574,10 @@ export class KIO<E, A> {
   }
 
   /**
-   * Deletes multiple records from Kintone. The operations won't be executed until commit is called.
-   * @template R - The record type
-   * @param args - The arguments for deleting the records
-   * @returns An effect that will delete the records when committed
+   * Deletes multiple records. Won't be executed until commit is called.
+   * @template R - Record type
+   * @param args - Arguments for deleting the records
+   * @returns Effect that succeeds immediately (actual delete happens at commit)
    *
    * @example
    * ```typescript
@@ -602,9 +603,9 @@ export class KIO<E, A> {
   }
 
   /**
-   * Commits all pending changes to Kintone. This is required to execute any add, update, or delete operations.
-   * Multiple write operations can be stacked and will be executed together when commit is called.
-   * @returns An effect that will commit all pending changes
+   * Commits all pending changes. Required to execute any add, update, or delete operations.
+   * Multiple write operations can be stacked and executed together when commit is called.
+   * @returns Effect that succeeds when all changes are committed or fails with error
    *
    * @example
    * ```typescript
@@ -626,12 +627,12 @@ export class KIO<E, A> {
   }
 
   /**
-   * Transforms the result of a KIO operation.
-   * @template E - The error type
-   * @template A - The input type
-   * @template B - The output type
+   * Transforms the current result using the given function.
+   * @template E - Failure type
+   * @template A - Input type
+   * @template B - Output type
    * @param f - Function to transform the result
-   * @returns A function that can be used in pipe
+   * @returns Function that creates an effect succeeding with the transformed result
    *
    * @example
    * ```typescript
@@ -652,13 +653,13 @@ export class KIO<E, A> {
   }
 
   /**
-   * Chains KIO operations together.
-   * @template E - The input error type
-   * @template A - The input type
-   * @template E1 - The output error type
-   * @template B - The output type
-   * @param f - Function to transform the result into a new KIO operation
-   * @returns A function that can be used in pipe
+   * Chains effects sequentially based on current result.
+   * @template E - Input failure type
+   * @template A - Input type
+   * @template E1 - Output failure type
+   * @template B - Output type
+   * @param f - Function that returns the next effect
+   * @returns Function that creates chained effect
    *
    * @example
    * ```typescript

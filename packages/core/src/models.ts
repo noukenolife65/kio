@@ -1,13 +1,11 @@
 import * as v from "valibot";
 
-/** App ID */
 export const AppID = v.union([
   v.pipe(v.number(), v.integer()),
   v.pipe(v.string(), v.digits()),
 ]);
 export type AppID = v.InferOutput<typeof AppID>;
 
-/** Record ID */
 export const RecordID = v.union([
   v.pipe(v.number(), v.integer()),
   v.pipe(v.string(), v.digits()),
@@ -20,6 +18,10 @@ export const Revision = v.union([
 ]);
 export type Revision = v.InferOutput<typeof Revision>;
 
+/**
+ * Type constraint for Kintone field objects.
+ * @template T - Record type, typically generated with @kintone/dts-gen
+ */
 export type KFields<T> = {
   [K in keyof T]: T[K] extends {
     type?: string | undefined;
@@ -28,6 +30,10 @@ export type KFields<T> = {
     ? T[K]
     : never;
 };
+
+/**
+ * Generic Kintone field objects.
+ */
 export const KAnyFields = v.record(
   v.string(),
   v.object({
@@ -41,13 +47,20 @@ export type KIdField = { $id: { value: AppID } };
 export type KRevisionField = { $revision: { value: Revision } };
 
 export type KNewRecordConstructor<R extends KFields<R>> = {
+  /** App ID */
   app: AppID;
+  /** Field objects for the record */
   value: R;
 };
 const _KNewRecordConstructor = v.object({
   app: AppID,
   value: KAnyFields,
 }) satisfies v.GenericSchema<KNewRecordConstructor<KAnyFields>>;
+
+/**
+ * New record not yet saved to Kintone.
+ * @template R - Record type
+ */
 export class KNewRecord<R extends KFields<R>> {
   readonly kind: "KNewRecord" = "KNewRecord" as const;
   readonly value: R;
@@ -67,9 +80,13 @@ export class KNewRecord<R extends KFields<R>> {
 }
 
 export type KRecordConstructor<R extends KFields<R>> = {
+  /** App ID */
   app: AppID;
+  /** Record ID */
   id: RecordID;
+  /** Field objects for the record */
   value: R;
+  /** Record revision for optimistic locking */
   revision: Revision | undefined;
 };
 const _KRecordConstructor = v.object({
@@ -78,6 +95,11 @@ const _KRecordConstructor = v.object({
   value: KAnyFields,
   revision: v.undefinedable(Revision),
 }) satisfies v.GenericSchema<KRecordConstructor<KAnyFields>>;
+
+/**
+ * Existing record saved to Kintone.
+ * @template R - Record type
+ */
 export class KRecord<R extends KFields<R>> {
   readonly kind: "KRecord" = "KRecord" as const;
   readonly value: R;
@@ -109,23 +131,25 @@ export type KError = {
 };
 
 /**
- * Arguments for getting a single record from Kintone
+ * Get single record arguments
+ * @inline
  */
 export const GetRecordArgs = v.object({
-  /** The app ID */
+  /** App ID */
   app: AppID,
-  /** The record ID */
+  /** Record ID */
   id: RecordID,
 });
 export type GetRecordArgs = v.InferOutput<typeof GetRecordArgs>;
 
 /**
- * Arguments for getting multiple records from Kintone
+ * Get multiple records arguments
+ * @inline
  */
 export const GetRecordsArgs = v.object({
-  /** The app ID */
+  /** App ID */
   app: AppID,
-  /** Optional list of field codes to retrieve */
+  /** Optional field codes to retrieve */
   fields: v.optional(v.array(v.pipe(v.string(), v.minLength(1)))),
   /** Optional query string to filter records */
   query: v.optional(v.string()),
@@ -133,27 +157,44 @@ export const GetRecordsArgs = v.object({
 export type GetRecordsArgs = v.InferOutput<typeof GetRecordsArgs>;
 
 /**
- * Arguments for adding a single record
+ * Add single record arguments
+ * @template R - Record type
+ * @inline
  */
-export type AddRecordArgs<R extends KFields<R>> = { app: AppID; record: R };
+export type AddRecordArgs<R extends KFields<R>> = {
+  /** App ID */
+  app: AppID;
+  /** Field objects for the new record */
+  record: R;
+};
 export const _AddRecordArgs = v.object({
   app: AppID,
   record: KAnyFields,
 }) satisfies v.GenericSchema<AddRecordArgs<KAnyFields>>;
 
 /**
- * Arguments for adding multiple records
+ * Add multiple records arguments
+ * @template R - Record type
+ * @inline
  */
-export type AddRecordsArgs<R extends KFields<R>> = { app: AppID; records: R[] };
+export type AddRecordsArgs<R extends KFields<R>> = {
+  /** App ID */
+  app: AppID;
+  /** Array of field objects for the new records */
+  records: R[];
+};
 export const _AddRecordsArgs = v.object({
   app: AppID,
   records: v.pipe(v.array(KAnyFields), v.minLength(1)),
 }) satisfies v.GenericSchema<AddRecordsArgs<KAnyFields>>;
 
 /**
- * Arguments for updating a single record
+ * Update single record arguments
+ * @template R - Record type
+ * @inline
  */
 export type UpdateRecordArgs<R extends KFields<R>> = {
+  /** KRecord instance to update */
   record: KRecord<R>;
 };
 export const _UpdateRecordArgs = v.object({
@@ -161,9 +202,12 @@ export const _UpdateRecordArgs = v.object({
 });
 
 /**
- * Arguments for updating multiple records
+ * Update multiple records arguments
+ * @template R - Record type
+ * @inline
  */
 export type UpdateRecordsArgs<R extends KFields<R>> = {
+  /** Array of KRecord instances to update */
   records: KRecord<R>[];
 };
 export const _UpdateRecordsArgs = v.object({
@@ -171,9 +215,12 @@ export const _UpdateRecordsArgs = v.object({
 });
 
 /**
- * Arguments for deleting a single record
+ * Delete single record arguments
+ * @template R - Record type
+ * @inline
  */
 export type DeleteRecordArgs<R extends KFields<R>> = {
+  /** KRecord instance to delete */
   record: KRecord<R>;
 };
 export const _DeleteRecordArgs = v.object({
@@ -181,9 +228,12 @@ export const _DeleteRecordArgs = v.object({
 });
 
 /**
- * Arguments for deleting multiple records
+ * Delete multiple records arguments
+ * @template R - Record type
+ * @inline
  */
 export type DeleteRecordsArgs<R extends KFields<R>> = {
+  /** Array of KRecord instances to delete */
   records: KRecord<R>[];
 };
 export const _DeleteRecordsArgs = v.object({
@@ -211,11 +261,5 @@ export const validate = <
     } else {
       throw e;
     }
-  }
-};
-
-export const validateKRecord = (record: unknown): void => {
-  if (!(record instanceof KRecord)) {
-    throw new ValidationError("must be a KRecord instance");
   }
 };
